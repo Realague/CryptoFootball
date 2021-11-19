@@ -3,10 +3,10 @@ pragma solidity ^0.8.9;
 
 import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol';
 
-contract Won is ERC20 {
+contract CryptoFootball is ERC20 {
 
-    constructor() ERC20 ("WON", "WON") {
-        _mint(msg.sender, 200000);
+    constructor() ERC20 ("CryptoFootball", "CP") {
+        _mint(_msgSender(), 1000000 * (10 ** 18));
     }
     
 }

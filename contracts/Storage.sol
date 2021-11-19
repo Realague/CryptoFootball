@@ -9,7 +9,7 @@ contract Storage is Ownable {
     
     using SafeMath for uint256;
     
-    address[] private contractsVersion;
+    mapping(address => bool) public whiteList;
     
     mapping (bytes32 => string) internal stringStorage;
     
@@ -19,76 +19,61 @@ contract Storage is Ownable {
     
     mapping (bytes32 => bool) internal boolStorage;
     
-    mapping (bytes32 => mapping(address => bool)) internal boolStorage;
-    
-    function upgradeVersion(address _newVersion, address _oldVersion) external onlyOwner {
-        for (uint i = 0; i != contractsVersion.length; i.add(1)) {
-            if (contractsVersion[i] == _oldVersion) {
-                contractsVersion[i] = _newVersion;
-            }
-        }
+    function upgradeVersion(address oldVersion, address newVersion) external onlyOwner {
+        delete whiteList[oldVersion];
+        whiteList[newVersion] = true;
     }
     
     function addContract(address _contract) external onlyOwner {
-        contractsVersion.push(_contract);
+        whiteList[_contract] = true;
     }
     
     function removeContract(address _contract) external onlyOwner {
-        for (uint i = 0; i != contractsVersion.length; i.add(1)) {
-            if (contractsVersion[i] == _contract) {
-                delete contractsVersion[i];
-            }
-        }
+        delete whiteList[_contract];
     }
     
-    modifier onlyLatestVersion() {
-        uint i = 0;
-        for (; i != contractsVersion.length; i.add(1)) {
-            if (contractsVersion[i] == _msgSender()) {
-                break;
-            }
-        }
-        require(_msgSender() == contractsVersion[i] || _msgSender() == owner());
+    modifier onlyWhitelistedContract() {
+        require(whiteList[_msgSender()] || _msgSender() == owner(), "Unauthorized contract");
         _;
     }
     
     // *** Getter Methods ***
-    function getUint(bytes32 _key) external view onlyLatestVersion returns(uint) {
-        return uintStorage[_key];
+    function getUint(bytes32 key) external view onlyWhitelistedContract returns (uint) {
+        return uintStorage[key];
     }
 
-    function getAddress(bytes32 _key) external view onlyLatestVersion returns(address) {
-        return addressStorage[_key];
+    function getAddress(bytes32 key) external view onlyWhitelistedContract returns (address) {
+        return addressStorage[key];
     }
     
-    function getString(bytes32 _key) external view onlyLatestVersion returns(string memory) {
-        return stringStorage[_key];
+    function getString(bytes32 key) external view onlyWhitelistedContract returns (string memory) {
+        return stringStorage[key];
     }
 
     // *** Setter Methods ***
-    function setUint(bytes32 _key, uint _value) onlyLatestVersion external {
-        uintStorage[_key] = _value;
+    function setUint(bytes32 key, uint value) onlyWhitelistedContract external {
+        uintStorage[key] = value;
     }
 
-    function setAddress(bytes32 _key, address _value) onlyLatestVersion external {
-        addressStorage[_key] = _value;
+    function setAddress(bytes32 key, address value) onlyWhitelistedContract external {
+        addressStorage[key] = value;
     }
     
-    function setString(bytes32 _key, string memory _value) onlyLatestVersion external {
-        stringStorage[_key] = _value;
+    function setString(bytes32 key, string memory value) onlyWhitelistedContract external {
+        stringStorage[key] = value;
     }
 
     // *** Delete Methods ***
-    function deleteUint(bytes32 _key) onlyLatestVersion external {
-        delete uintStorage[_key];
+    function deleteUint(bytes32 key) onlyWhitelistedContract external {
+        delete uintStorage[key];
     }
 
-    function deleteAddress(bytes32 _key) onlyLatestVersion external {
-        delete addressStorage[_key];
+    function deleteAddress(bytes32 key) onlyWhitelistedContract external {
+        delete addressStorage[key];
     }
     
-    function deleteString(bytes32 _key) onlyLatestVersion external {
-        delete stringStorage[_key];
+    function deleteString(bytes32 key) onlyWhitelistedContract external {
+        delete stringStorage[key];
     }
     
 }
