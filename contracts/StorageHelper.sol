@@ -15,10 +15,7 @@ contract StorageHelper is Ownable {
     
     CryptoFootballStorage internal cryptoFootballStorage;
     
-    IERC20 internal cryptoFootballToken;
-    
-    constructor(address cryptoFootballTokenAddress, address storageAdress) {
-        cryptoFootballToken = IERC20(cryptoFootballTokenAddress);
+    constructor(address storageAdress) {
         cryptoFootballStorage = CryptoFootballStorage(storageAdress);
     }
     
@@ -42,7 +39,11 @@ contract StorageHelper is Ownable {
     }
     
     function setCryptoFootballToken(address _tokenAddress) external onlyOwner {
-        cryptoFootballToken = IERC20(_tokenAddress);
+        cryptoFootballStorage.setCryptoFootballToken(_tokenAddress);
+    }
+    
+    function getCryptoFootballToken() internal view returns (IERC20) {
+        return cryptoFootballStorage.getCryptoFootballToken();
     }
     
     function setCryptoFootballStorage(address _cryptoFootballStorage) external {

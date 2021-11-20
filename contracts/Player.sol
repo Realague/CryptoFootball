@@ -4,12 +4,12 @@ pragma solidity ^0.8.9;
 struct Player {
     uint id;
     uint imageId;
-    Rarity rarity;
-    Frame frame;
+    uint rarity;
+    uint frame;
     uint score;
     uint staminaMax;
     uint currentStamina;
-    uint lastTimePlayed;
+    uint lastTraining;
     uint xp;
 }
 

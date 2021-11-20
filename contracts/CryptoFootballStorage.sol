@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
-
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 import "./Storage.sol";
 import "./MarketItem.sol";
 
@@ -14,8 +14,22 @@ contract CryptoFootballStorage is Storage {
     
     MarketItem[] private marketItems;
     
+    IERC20 internal cryptoFootballToken;
+    
     // Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _operatorApprovals;
+    
+    constructor(address _cryptoFootballToken) {
+        cryptoFootballToken  = IERC20(_cryptoFootballToken);
+    }
+    
+    function setCryptoFootballToken(address _cryptoFootballToken) external onlyWhitelistedContract {
+        cryptoFootballToken = IERC20(_cryptoFootballToken);
+    }
+    
+    function getCryptoFootballToken() external view onlyWhitelistedContract returns (IERC20) {
+        return cryptoFootballToken;
+    }
     
     function getNumberMarketItems() external view onlyWhitelistedContract returns (uint) {
         return marketItems.length;

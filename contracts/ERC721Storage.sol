@@ -12,7 +12,7 @@ contract ERC721Storage is ERC721, StorageHelper {
 
     event NewPlayer(uint playerId);
     
-    constructor(address _cryptoFootballToken, address _storageAdress) ERC721("PlayerFootball", "PB") StorageHelper(_cryptoFootballToken, _storageAdress) {
+    constructor(address storageAdress) ERC721("PlayerFootball", "PB") StorageHelper(storageAdress) {
     }
 
     /**

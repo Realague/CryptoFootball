@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol';
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol';
-import './Player.sol';
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
+import "./Player.sol";
 
 contract Storage is Ownable {
     
@@ -51,28 +51,28 @@ contract Storage is Ownable {
     }
 
     // *** Setter Methods ***
-    function setUint(bytes32 key, uint value) onlyWhitelistedContract external {
+    function setUint(bytes32 key, uint value) external onlyWhitelistedContract {
         uintStorage[key] = value;
     }
 
-    function setAddress(bytes32 key, address value) onlyWhitelistedContract external {
+    function setAddress(bytes32 key, address value) external onlyWhitelistedContract {
         addressStorage[key] = value;
     }
     
-    function setString(bytes32 key, string memory value) onlyWhitelistedContract external {
+    function setString(bytes32 key, string memory value) external onlyWhitelistedContract {
         stringStorage[key] = value;
     }
 
     // *** Delete Methods ***
-    function deleteUint(bytes32 key) onlyWhitelistedContract external {
+    function deleteUint(bytes32 key) external onlyWhitelistedContract {
         delete uintStorage[key];
     }
 
-    function deleteAddress(bytes32 key) onlyWhitelistedContract external {
+    function deleteAddress(bytes32 key) external onlyWhitelistedContract {
         delete addressStorage[key];
     }
     
-    function deleteString(bytes32 key) onlyWhitelistedContract external {
+    function deleteString(bytes32 key) external onlyWhitelistedContract {
         delete stringStorage[key];
     }
     

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol';
-import './Player.sol';
-import './ERC721Storage.sol';
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
+import "./Player.sol";
+import "./ERC721Storage.sol";
 
 contract PlayerFactory is ERC721Storage {
     
@@ -29,7 +29,7 @@ contract PlayerFactory is ERC721Storage {
     
     uint public mintFees = 40;
     
-    constructor(address cryptoFootballToken, address storageAdress) ERC721Storage(cryptoFootballToken, storageAdress) {
+    constructor(address storageAdress) ERC721Storage(storageAdress) {
     }
 
     function setFeesToken(address tokenAddress) external onlyOwner {
@@ -72,7 +72,7 @@ contract PlayerFactory is ERC721Storage {
         mintablePlayers[rarity][imageId] = mintable;
     }
 
-    function mintPlayer(uint imageId, Frame frame, Rarity rarity, uint score, uint staminaMax) external onlyOwner {
+    function mintPlayer(uint imageId, uint frame, uint rarity, uint score, uint staminaMax) external onlyOwner {
         Player memory player = Player(0, imageId, rarity, frame, score, staminaMax, staminaMax, 0, 0);
         player = cryptoFootballStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
@@ -80,21 +80,13 @@ contract PlayerFactory is ERC721Storage {
     
     function mintPlayer() external {
         uint mintPriceCalulated = mintPrice.mul(getFootballTokenPrice());
-        require(feeToken.balanceOf(_msgSender()) >= mintFees && cryptoFootballToken.balanceOf(_msgSender()) >= mintPriceCalulated, "Not enought token to mint.");
-        uint256 allowance = feeToken.allowance(_msgSender(), address(this));
-        if (allowance < mintFees) {
-            feeToken.approve(address(this), mintFees);
-        }
+        require(feeToken.balanceOf(_msgSender()) >= mintFees && getCryptoFootballToken().balanceOf(_msgSender()) >= mintPriceCalulated, "Not enought token to mint.");
         feeToken.transferFrom(_msgSender(), address(this), mintFees);
-        allowance = cryptoFootballToken.allowance(_msgSender(), address(this));
-        if (allowance < mintPriceCalulated) {
-            cryptoFootballToken.approve(address(this), mintPriceCalulated);
-        }
-        cryptoFootballToken.transferFrom(_msgSender(), address(this), mintPriceCalulated);
+        getCryptoFootballToken().transferFrom(_msgSender(), address(this), mintPriceCalulated);
         Player memory player;
         player = _generateFrame(player);
         player = _generateRarityAndScore(player);
-        player.imageId = _generateImageId(uint(player.rarity));
+        player.imageId = _generateImageId(player.rarity);
         player.xp = 0;
         player = cryptoFootballStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
@@ -105,11 +97,11 @@ contract PlayerFactory is ERC721Storage {
         
         for (uint i = 0; i < frames.length; i++) {
             if (frame <= frames[i]) {
-                player.frame =  Frame(i);
+                player.frame =  i;
                 return player;
             }
         }
-        return _player;
+        return player;
     }
     
     function _generateRarityAndScore(Player memory player) internal view returns (Player memory) {
@@ -117,7 +109,7 @@ contract PlayerFactory is ERC721Storage {
         
         for (uint i = 0; i < rarities.length; i++) {
             if (rarity <= rarities[i]) {
-                player.rarity = Rarity(i);
+                player.rarity = i;
                 if (_randMod(2) == 0) {
                     player.score = scores[i].add(scores[i].mul(_randMod(scoreThreshold)).div(100));
                 } else {
@@ -125,11 +117,11 @@ contract PlayerFactory is ERC721Storage {
                 }
                 player.staminaMax = stamina[i];
                 player.currentStamina = stamina[i];
-                player.lastTimePlayed = 0;
+                player.lastTraining = 0;
                 return player;
             }
         }
-        return _player;
+        return player;
     }
     
     function _generateImageId(uint rarity) internal view returns (uint) {
