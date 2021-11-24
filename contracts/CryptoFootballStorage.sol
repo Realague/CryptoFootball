@@ -16,14 +16,21 @@ contract CryptoFootballStorage is Storage {
     
     IERC20 internal cryptoFootballToken;
     
+    IERC20 internal feeToken;
+    
     // Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _operatorApprovals;
     
-    constructor(address _cryptoFootballToken) {
+    constructor(address _cryptoFootballToken, address _feeToken) {
+        feeToken = IERC20(_feeToken);
         cryptoFootballToken  = IERC20(_cryptoFootballToken);
     }
     
     // *** Getter Methods ***
+    function getFeeToken() external view onlyWhitelistedContract returns (IERC20) {
+        return feeToken;
+    }
+    
     function getCryptoFootballToken() external view onlyWhitelistedContract returns (IERC20) {
         return cryptoFootballToken;
     }
