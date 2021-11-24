@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
-import "./Player.sol";
+import "./structure/Player.sol";
 import "./ERC721Storage.sol";
 
 contract PlayerFactory is ERC721Storage {
@@ -17,19 +17,34 @@ contract PlayerFactory is ERC721Storage {
     
     uint[] private scores = [20, 40, 60, 75];
     
-    uint[] private stamina = [2, 3, 5, 7];
+    uint[] private staminaRegenPerDay = [60, 80, 100, 120, 140];
+    
+    uint[] private positions = [15, 45, 75, 100];
     
     IERC20 private feeToken = IERC20(address(0x0078867bbeef44f2326bf8ddd1941a4439382ef2a7));
     
-    uint private mintPrice = 100;
-    
     uint private modulus = 100;
+    
+    uint private staminaMax = 100;
     
     uint private scoreThreshold = 20;
     
+    bool public mintOpen = false;
+    
     uint public mintFees = 40;
     
+    uint public mintPrice = 100;
+    
     constructor(address storageAdress) ERC721Storage(storageAdress) {
+    }
+    
+    //Setter
+    function setStaminaMax(uint _staminaMax) external onlyOwner {
+        staminaMax = _staminaMax;
+    }
+    
+    function setMintOpen(bool _mintOpen) external onlyOwner {
+        mintOpen = _mintOpen;
     }
 
     function setFeesToken(address tokenAddress) external onlyOwner {
@@ -64,44 +79,46 @@ contract PlayerFactory is ERC721Storage {
         modulus = _modulus;
     }
     
-    function setStamina(uint[] memory _stamina) external onlyOwner {
-        stamina = _stamina;
+    function setStaminaRegenPerDay(uint[] memory _staminaRegenPerDay) external onlyOwner {
+        staminaRegenPerDay = _staminaRegenPerDay;
     }
     
-    function setMintablePlayer(uint rarity, uint imageId, bool mintable) external {
+    function setMintablePlayer(uint rarity, uint imageId, bool mintable) external onlyOwner {
         mintablePlayers[rarity][imageId] = mintable;
     }
 
-    function mintPlayer(uint imageId, uint frame, uint rarity, uint score, uint staminaMax) external onlyOwner {
-        Player memory player = Player(0, imageId, rarity, frame, score, staminaMax, staminaMax, 0, 0);
+    function mintPlayer(uint imageId, uint position, uint frame, uint rarity, uint score, uint _staminaMax, uint _staminaRegenPerDay) external onlyOwner {
+        Player memory player = Player(0, imageId, position, rarity, frame, score, staminaMax, _staminaMax, _staminaRegenPerDay, 0, 0);
         player = cryptoFootballStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
     }
     
-    function mintPlayer() external {
+    function mintPlayer() external botPrevention {
         uint mintPriceCalulated = mintPrice.mul(getFootballTokenPrice());
         require(feeToken.balanceOf(_msgSender()) >= mintFees && getCryptoFootballToken().balanceOf(_msgSender()) >= mintPriceCalulated, "Not enought token to mint.");
-        feeToken.transferFrom(_msgSender(), address(this), mintFees);
-        getCryptoFootballToken().transferFrom(_msgSender(), address(this), mintPriceCalulated);
+        feeToken.transferFrom(_msgSender(), _getRewardPoolAddress(), mintFees);
+        getCryptoFootballToken().transferFrom(_msgSender(), _getRewardPoolAddress(), mintPriceCalulated);
         Player memory player;
-        player = _generateFrame(player);
+        player.frame = _generateFrame();
         player = _generateRarityAndScore(player);
+        player.position = _generatePosition();
         player.imageId = _generateImageId(player.rarity);
-        player.xp = 0;
+        player.staminaMax = staminaMax;
+        player.currentStamina = staminaMax;
+        player.staminaRegenPerDay = staminaRegenPerDay[player.frame];
         player = cryptoFootballStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
     }
     
-    function _generateFrame(Player memory player) internal view returns (Player memory) {
+    function _generateFrame() internal view returns (uint) {
         uint frame = _randMod(modulus);
         
         for (uint i = 0; i < frames.length; i++) {
             if (frame <= frames[i]) {
-                player.frame =  i;
-                return player;
+                return i;
             }
         }
-        return player;
+        return 0;
     }
     
     function _generateRarityAndScore(Player memory player) internal view returns (Player memory) {
@@ -115,9 +132,6 @@ contract PlayerFactory is ERC721Storage {
                 } else {
                     player.score = scores[i].sub(scores[i].mul(_randMod(scoreThreshold)).div(100));
                 }
-                player.staminaMax = stamina[i];
-                player.currentStamina = stamina[i];
-                player.lastTraining = 0;
                 return player;
             }
         }
@@ -131,6 +145,16 @@ contract PlayerFactory is ERC721Storage {
         } while (!mintablePlayers[rarity][imageId]);
         return imageId;
     }
-
+    
+    function _generatePosition() internal view returns (uint) {
+        uint position = _randMod(modulus);
+        
+        for (uint i = 0; i < positions.length; i++) {
+            if (position <= positions[i]) {
+                return i;
+            }
+        }
+        return 2;
+    }
 
 }

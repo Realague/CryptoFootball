@@ -62,14 +62,6 @@ contract StorageHelper is Ownable {
         return cryptoFootballStorage.deleteAddress(keccak256(abi.encodePacked("player", _tokenId)));
     }
     
-    function _setMarketplaceAddress(address _contractAddress) internal {
-        cryptoFootballStorage.setAddress(keccak256("marketplace"), _contractAddress);
-    }
-    
-    function _getMarketplaceAdress() internal view returns (address contractAddress) {
-        return cryptoFootballStorage.getAddress(keccak256("marketplace"));
-    }
-    
     function _setNumberOfPlayerOwned(address _address, uint _count) internal {
         cryptoFootballStorage.setUint(keccak256(abi.encodePacked("nbplayers", _address)), _count);
     }
@@ -146,7 +138,7 @@ contract StorageHelper is Ownable {
         cryptoFootballStorage.setAddress(keccak256(abi.encodePacked("rewardpool")), _rewardPoolAddress);
     }
     
-    function _addMarketItems(MarketItem memory marketItem) internal {
+    function _addMarketItem(MarketItem memory marketItem) internal {
         cryptoFootballStorage.addMarketItems(marketItem);
     }
     

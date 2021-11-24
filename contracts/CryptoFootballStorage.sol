@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 import "./Storage.sol";
-import "./MarketItem.sol";
+import "./structure/MarketItem.sol";
 
 contract CryptoFootballStorage is Storage {
     
@@ -23,10 +23,7 @@ contract CryptoFootballStorage is Storage {
         cryptoFootballToken  = IERC20(_cryptoFootballToken);
     }
     
-    function setCryptoFootballToken(address _cryptoFootballToken) external onlyWhitelistedContract {
-        cryptoFootballToken = IERC20(_cryptoFootballToken);
-    }
-    
+    // *** Getter Methods ***
     function getCryptoFootballToken() external view onlyWhitelistedContract returns (IERC20) {
         return cryptoFootballToken;
     }
@@ -43,29 +40,8 @@ contract CryptoFootballStorage is Storage {
         return marketItems[id];
     }
     
-    function addMarketItems(MarketItem memory marketItem) external onlyWhitelistedContract {
-        marketItems.push(marketItem);
-    }
-    
-    function setMarketItem(MarketItem memory marketItem) external onlyWhitelistedContract {
-        require(marketItem.itemId < marketItems.length);
-        marketItems[marketItem.itemId] = marketItem;
-    }
-    
     function getNumberPlayers() external view returns (uint) {
         return players.length;
-    }
-
-    function createPlayer(Player memory player) external onlyWhitelistedContract returns (Player memory) {
-        player.id = players.length;
-        players.push(player);
-        return player;
-    }
-
-
-    function setPlayer(Player memory player) external onlyWhitelistedContract {
-        require(player.id < players.length);
-        players[player.id] = player;
     }
     
     function getPlayer(uint tokenId) external view returns (Player memory) {
@@ -88,8 +64,33 @@ contract CryptoFootballStorage is Storage {
         return _operatorApprovals[owner][operator];
     }
     
+    // *** Setter Methods ***
+    function addMarketItems(MarketItem memory marketItem) external onlyWhitelistedContract {
+        marketItems.push(marketItem);
+    }
+    
+    function setMarketItem(MarketItem memory marketItem) external onlyWhitelistedContract {
+        require(marketItem.itemId < marketItems.length);
+        marketItems[marketItem.itemId] = marketItem;
+    }
+    
+    function setPlayer(Player memory player) external onlyWhitelistedContract {
+        require(player.id < players.length);
+        players[player.id] = player;
+    }
+
+    function createPlayer(Player memory player) external onlyWhitelistedContract returns (Player memory) {
+        player.id = players.length;
+        players.push(player);
+        return player;
+    }
+    
     function setOperatorApproval(address owner, address operator, bool approval) external {
         _operatorApprovals[owner][operator] = approval;
+    }
+    
+    function setCryptoFootballToken(address _cryptoFootballToken) external onlyWhitelistedContract {
+        cryptoFootballToken = IERC20(_cryptoFootballToken);
     }
     
 }

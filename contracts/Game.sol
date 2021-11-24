@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol";
 import "./StorageHelper.sol";
-import "./TrainingGround.sol";
-import "./Player.sol";
+import "./structure/TrainingGround.sol";
+import "./structure/Player.sol";
 
 contract Game is StorageHelper, ReentrancyGuard {
     
@@ -19,13 +19,13 @@ contract Game is StorageHelper, ReentrancyGuard {
     
     uint private staminaCost = 20;
     
-    bool private fightOpen = false;
+    uint private xpPerDollar = 50;
     
     uint[] private frameBonus = [0, 10, 20, 30, 50];
     
-    uint[] private staminaRegenPerDay = [60, 80, 100, 120, 140];
-    
     TrainingGround[] private trainingGrounds;
+    
+    bool public fightOpen = false;
     
     event TrainingDone(bool won, uint rewards, uint xp, bool levelUp);
     
@@ -35,6 +35,62 @@ contract Game is StorageHelper, ReentrancyGuard {
         trainingGrounds.push(TrainingGround(2, 50, 10, 10, 200));
     }
     
+    // *** Getter Methods ***
+    function getTrainingGrounds() external view onlyOwner returns (TrainingGround[] memory) {
+        return trainingGrounds;
+    }
+    
+    function getClaimFeeDecreaseRatePerDay() external view onlyOwner returns (uint) {
+        return claimFeeDecreaseRatePerDay;
+    }
+    
+    function getClaimFeePercentage() external view onlyOwner returns (uint) {
+        return claimFeePercentage;
+    }
+    
+    function getRewards() public view returns (uint) {
+        return _getRewards(_msgSender());
+    }
+    
+    function getClaimFee() public view returns (uint) {
+        uint fee = claimFeePercentage.sub(claimFeeDecreaseRatePerDay.mul(block.timestamp.sub(_getRewardTimer(_msgSender())).div(1 days)));
+        return fee > 0 && fee <= 30 ? fee : 0;
+    }
+   
+    function getClaimCooldown() external view onlyOwner returns (uint) {
+        return claimCooldown;
+    }
+    
+    function getCurrentStamina(Player memory player) public view returns (uint) {
+        uint stamina = player.currentStamina + (player.lastTraining - block.timestamp) / (player.staminaRegenPerDay / 24 hours);
+        return stamina > player.staminaMax ? player.staminaMax : stamina;
+    }
+    
+    function getXpRequireToLvlUp(uint score) public pure returns (uint) {
+        return score * (score / 2);
+    }
+    
+    // *** Setter Methods ***
+    function getXpPerDollar(uint _xpPerDollar) external onlyOwner {
+        xpPerDollar = _xpPerDollar;
+    }
+    
+    function setOpenFight(bool _fightOpen) external onlyOwner {
+        fightOpen = _fightOpen;
+    }
+    
+   function setClaimCooldown(uint _claimCooldown) external onlyOwner {
+       claimCooldown = _claimCooldown;
+   }
+    
+    function setClaimFeePercentage(uint _claimFeePercentage) external onlyOwner {
+        claimFeePercentage = _claimFeePercentage;
+    }
+    
+    function setClaimFeeDecreaseRatePerDay(uint _claimFeeDecreaseRatePerDay) external onlyOwner {
+        claimFeeDecreaseRatePerDay = _claimFeeDecreaseRatePerDay;
+    }
+    
     function setTrainingGround(TrainingGround[] memory _trainingGrounds) external onlyOwner {
         for (uint i = 0; i < trainingGrounds.length; i++) {
             delete trainingGrounds[i];
@@ -42,42 +98,6 @@ contract Game is StorageHelper, ReentrancyGuard {
         for (uint i = 0; i < _trainingGrounds.length; i++) {
             trainingGrounds.push(_trainingGrounds[i]);
         }
-    }
-    
-    function getTrainingGrounds() external view onlyOwner returns (TrainingGround[] memory) {
-        return trainingGrounds;
-    }
-    
-   function setClaimCooldown(uint _claimCooldown) external onlyOwner {
-       claimCooldown = _claimCooldown;
-   }
-   
-   function getClaimCooldown() external view onlyOwner returns (uint) {
-       return claimCooldown;
-   }
-    
-    function setOpenFight(bool _fightOpen) external onlyOwner {
-        fightOpen = _fightOpen;
-    }
-    
-    function getOpenFight() external view onlyOwner returns (bool) {
-       return fightOpen;
-   }
-    
-    function setClaimFeePercentage(uint _claimFeePercentage) external onlyOwner {
-        claimFeePercentage = _claimFeePercentage;
-    }
-    
-    function getClaimFeePercentage() external view onlyOwner returns (uint) {
-        return claimFeePercentage;
-    }
-    
-    function setClaimFeeDecreaseRatePerDay(uint _claimFeeDecreaseRatePerDay) external onlyOwner {
-        claimFeeDecreaseRatePerDay = _claimFeeDecreaseRatePerDay;
-    }
-    
-    function getClaimFeeDecreaseRatePerDay() external view onlyOwner returns (uint) {
-        return claimFeeDecreaseRatePerDay;
     }
 
     function trainingGround(uint trainingGroundId, uint playerId) external botPrevention {
@@ -109,18 +129,13 @@ contract Game is StorageHelper, ReentrancyGuard {
         player.xp += xpGain;
         bool levelUp = false;
         //check if the player levelUp
-        if (player.xp >= xpRequireToLvlUp(player.score)) {
+        if (player.xp >= getXpRequireToLvlUp(player.score)) {
             player.score += 1;
-            player.xp %= xpRequireToLvlUp(player.score);
+            player.xp %= getXpRequireToLvlUp(player.score);
             levelUp = true;
         }
         cryptoFootballStorage.setPlayer(player);
         emit TrainingDone(won, won ? tg.rewards : 0, xpGain, levelUp);
-    }
-    
-    function getCurrentStamina(Player memory player) public view returns (uint) {
-        uint stamina = player.currentStamina + (player.lastTraining - block.timestamp) / (staminaRegenPerDay[player.frame] / 24 hours);
-        return stamina > player.staminaMax ? player.staminaMax : stamina;
     }
     
     function _initCooldowns() internal {
@@ -134,10 +149,6 @@ contract Game is StorageHelper, ReentrancyGuard {
     
     function _train(uint trainingGroundId, uint playerScore) internal view returns (bool) {
         return _randMod(100) <= trainingGrounds[trainingGroundId].difficulty * playerScore / 100 + trainingGrounds[trainingGroundId].baseWinrate;
-    }
-    
-    function xpRequireToLvlUp(uint score) public pure returns (uint) {
-        return score * (score / 2);
     }
     
     function _checkPoolToken(uint rewards) internal view returns (bool) {
@@ -155,18 +166,16 @@ contract Game is StorageHelper, ReentrancyGuard {
         getCryptoFootballToken().transfer(_msgSender(), rewards);
     }
     
-    function burnRewardToIncreaseScore(uint tokenId, uint amountToBurn) external botPrevention {
-        
+    function payToLevelUp(uint playerId, uint amount) external botPrevention {
+        Player memory player = _getPlayer(playerId);
+        uint xp = amount * getFootballTokenPrice() * xpPerDollar;
+        while (getXpRequireToLvlUp(player.score) <= xp) {
+            xp -= getXpRequireToLvlUp(player.score);
+            player.score += 1;
+        }
+        player.xp += xp;
+        cryptoFootballStorage.setPlayer(player);
     }
-    
-    function getRewards() public view returns (uint) {
-        return _getRewards(_msgSender());
-    }
-    
-    function getClaimFee() public view returns (uint) {
-        uint fee = claimFeePercentage.sub(claimFeeDecreaseRatePerDay.mul(block.timestamp.sub(_getRewardTimer(_msgSender())).div(1 days)));
-        return fee > 0 && fee <= 30 ? fee : 0;
-    }
-    
+
 }
 

@@ -17,18 +17,17 @@ contract Marketplace is StorageHelper {
     
     event MarketItemCreated(
         uint indexed itemId,
-        uint256 indexed tokenId,
-        address seller,
+        uint indexed tokenId,
+        address indexed seller,
         address owner,
         uint256 price,
         bool sold
     );
     
-    constructor(address cryptoFootballToken, address storageAdress) StorageHelper(cryptoFootballToken, storageAdress) {
-        
+    constructor(address storageAdress) StorageHelper(storageAdress) {
     }
     
-    modifier onlySellerOf(uint itemid) {
+    modifier onlySellerOf(uint itemId) {
         require(_msgSender() == _getMarketItem(itemId).seller, "You are not the owner");
         _;
     }
@@ -138,15 +137,14 @@ contract Marketplace is StorageHelper {
     function buyPlayer(uint itemId) external botPrevention {
         MarketItem memory marketItem = _getMarketItem(itemId);
         require(marketItem.seller != address(0) && _msgSender() != marketItem.seller && !marketItem.sold, "You can't buy this player");
-        require(marketItem.price <= cryptoFootballToken.balanceOf(_msgSender()), "Balance is too low");
-        
-        cryptoFootballToken.transferFrom(_msgSender(), address(this), marketItem.price);
+        require(marketItem.price <= getCryptoFootballToken().balanceOf(_msgSender()), "Balance is too low");
         
         marketItem.owner = _msgSender();
         marketItem.sold = true;
         
         _setMarketItem(marketItem);
         
+        getCryptoFootballToken().transferFrom(_msgSender(), address(this), marketItem.price);
         playerContract.transferFrom(address(this), _msgSender(), marketItem.tokenId);
     }
     

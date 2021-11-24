@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
-import "./Player.sol";
+import "./structure/Player.sol";
 
 contract Storage is Ownable {
     
