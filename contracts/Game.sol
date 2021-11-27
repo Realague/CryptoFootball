@@ -20,12 +20,20 @@ contract Game is StorageHelper, ReentrancyGuard {
     uint private staminaCost = 20;
     
     uint private xpPerDollar = 50;
+
+    uint private upgradeFrameFee = 10;
     
+    uint[] private upgradeFrameCost = [5, 10, 15, 20, 30];
+
     uint[] private frameBonus = [0, 10, 20, 30, 50];
     
     TrainingGround[] private trainingGrounds;
     
-    bool public fightOpen = false;
+    bool public trainingOpen = false;
+
+    bool public levelUpOpen = false;
+
+    bool public improveFrameOpen = false;
     
     event TrainingDone(bool won, uint rewards, uint xp, bool levelUp);
     
@@ -71,12 +79,24 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     // *** Setter Methods ***
-    function getXpPerDollar(uint _xpPerDollar) external onlyOwner {
+    function setXpPerDollar(uint _xpPerDollar) external onlyOwner {
         xpPerDollar = _xpPerDollar;
     }
+
+    function setUpgradeFrameFee(uint _upgradeFrameFee) external onlyOwner {
+        upgradeFrameFee = _upgradeFrameFee;
+    }
     
-    function setOpenFight(bool _fightOpen) external onlyOwner {
-        fightOpen = _fightOpen;
+    function setTrainingOpen(bool _trainingOpen) external onlyOwner {
+        trainingOpen = _trainingOpen;
+    }
+
+    function setLevelUpOpen(bool _levelUpOpen) external onlyOwner {
+        levelUpOpen = _levelUpOpen;
+    }
+
+    function setImproveFrameOpen(bool _improveFrameOpen) external onlyOwner {
+        improveFrameOpen = _improveFrameOpen;
     }
     
    function setClaimCooldown(uint _claimCooldown) external onlyOwner {
@@ -101,7 +121,7 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
 
     function trainingGround(uint trainingGroundId, uint playerId) external botPrevention {
-        require(fightOpen);
+        require(trainingOpen);
         Player memory player = _getPlayer(playerId);
         require(getCurrentStamina(player) >= 20, "not enought stamina");
         player.currentStamina = getCurrentStamina(player) - 20;
@@ -134,7 +154,7 @@ contract Game is StorageHelper, ReentrancyGuard {
             player.xp %= getXpRequireToLvlUp(player.score);
             levelUp = true;
         }
-        cryptoFootballStorage.setPlayer(player);
+        footballHeroesStorage.setPlayer(player);
         emit TrainingDone(won, won ? tg.rewards : 0, xpGain, levelUp);
     }
     
@@ -152,7 +172,7 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     function _checkPoolToken(uint rewards) internal view returns (bool) {
-        return getCryptoFootballToken().balanceOf(address(this)) - _getGlobalRewards() >= rewards;
+        return getFootballHeroesToken().balanceOf(address(this)) - _getGlobalRewards() >= rewards;
     }
     
     function claimReward() external nonReentrant botPrevention {
@@ -163,7 +183,7 @@ contract Game is StorageHelper, ReentrancyGuard {
         _setRewards(_msgSender(), 0);
         _setClaimCooldown(_msgSender(), block.timestamp.add(claimCooldown));
         _setRewardTimer(_msgSender());
-        getCryptoFootballToken().transfer(_msgSender(), rewards);
+        getFootballHeroesToken().transfer(_msgSender(), rewards);
     }
     
     function payToLevelUp(uint playerId, uint amount) external botPrevention {
@@ -174,8 +194,18 @@ contract Game is StorageHelper, ReentrancyGuard {
             player.score += 1;
         }
         player.xp += xp;
-        cryptoFootballStorage.setPlayer(player);
+        footballHeroesStorage.setPlayer(player);
     }
+
+    function upgradeFrame(uint playerId1, uint playerId2) external botPrevention {
+        Player memory player1 = _getPlayer(playerId1);
+        Player memory player2 = _getPlayer(playerId2);
+        require(player1.frame == player2.frame && player1.imageId == player2.imageId, "Both players need to be identical");
+
+        require(_getFeeToken().balanceOf(_msgSender()) >= upgradeFrameFee &&
+        _getFootballHeroesToken().balanceOf(_msgSender()) >= _upgradeFrameCost[player1.frame] * getFootballTokenPrice(), "Insuficient balance");
+        
+
 
 }
 

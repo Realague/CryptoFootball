@@ -21,8 +21,6 @@ contract PlayerFactory is ERC721Storage {
     
     uint[] private positions = [15, 45, 75, 100];
     
-    IERC20 private feeToken = IERC20(address(0x0078867bbeef44f2326bf8ddd1941a4439382ef2a7));
-    
     uint private modulus = 100;
     
     uint private staminaMax = 100;
@@ -89,15 +87,16 @@ contract PlayerFactory is ERC721Storage {
 
     function mintPlayer(uint imageId, uint position, uint frame, uint rarity, uint score, uint _staminaMax, uint _staminaRegenPerDay) external onlyOwner {
         Player memory player = Player(0, imageId, position, rarity, frame, score, staminaMax, _staminaMax, _staminaRegenPerDay, 0, 0);
-        player = cryptoFootballStorage.createPlayer(player);
+        player = footballHeroesStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
     }
     
     function mintPlayer() external botPrevention {
+        require(mintOpen, "Mint not yet open");
         uint mintPriceCalulated = mintPrice.mul(getFootballTokenPrice());
-        require(feeToken.balanceOf(_msgSender()) >= mintFees && getCryptoFootballToken().balanceOf(_msgSender()) >= mintPriceCalulated, "Not enought token to mint.");
+        require(feeToken.balanceOf(_msgSender()) >= mintFees && getFootballHeroesToken().balanceOf(_msgSender()) >= mintPriceCalulated, "Not enought token to mint.");
         feeToken.transferFrom(_msgSender(), _getRewardPoolAddress(), mintFees);
-        getCryptoFootballToken().transferFrom(_msgSender(), _getRewardPoolAddress(), mintPriceCalulated);
+        getFootballHeroesToken().transferFrom(_msgSender(), _getRewardPoolAddress(), mintPriceCalulated);
         Player memory player;
         player.frame = _generateFrame();
         player = _generateRarityAndScore(player);
@@ -106,7 +105,7 @@ contract PlayerFactory is ERC721Storage {
         player.staminaMax = staminaMax;
         player.currentStamina = staminaMax;
         player.staminaRegenPerDay = staminaRegenPerDay[player.frame];
-        player = cryptoFootballStorage.createPlayer(player);
+        player = footballHeroesStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
     }
     

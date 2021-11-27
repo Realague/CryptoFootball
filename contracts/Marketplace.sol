@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/IERC721.sol';
-import './StorageHelper.sol';
-import './MarketItem.sol';
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/IERC721.sol";
+import "./StorageHelper.sol";
+import "./structure/MarketItem.sol";
 
 contract Marketplace is StorageHelper {
     
@@ -61,7 +61,7 @@ contract Marketplace is StorageHelper {
             false
         );
         
-        _addMarketItems(marketItem);
+        _addMarketItem(marketItem);
         
         playerContract.transferFrom(_msgSender(), address(this), tokenId);
         
@@ -137,14 +137,14 @@ contract Marketplace is StorageHelper {
     function buyPlayer(uint itemId) external botPrevention {
         MarketItem memory marketItem = _getMarketItem(itemId);
         require(marketItem.seller != address(0) && _msgSender() != marketItem.seller && !marketItem.sold, "You can't buy this player");
-        require(marketItem.price <= getCryptoFootballToken().balanceOf(_msgSender()), "Balance is too low");
+        require(marketItem.price <= getFootballHeroesToken().balanceOf(_msgSender()), "Balance is too low");
         
         marketItem.owner = _msgSender();
         marketItem.sold = true;
         
         _setMarketItem(marketItem);
         
-        getCryptoFootballToken().transferFrom(_msgSender(), address(this), marketItem.price);
+        getFootballHeroesToken().transferFrom(_msgSender(), address(this), marketItem.price);
         playerContract.transferFrom(address(this), _msgSender(), marketItem.tokenId);
     }
     

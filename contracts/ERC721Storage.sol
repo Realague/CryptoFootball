@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol';
-import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol';
-import './StorageHelper.sol';
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/ERC721.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
+import "./StorageHelper.sol";
 
 contract ERC721Storage is ERC721, StorageHelper {
     
@@ -12,7 +12,7 @@ contract ERC721Storage is ERC721, StorageHelper {
 
     event NewPlayer(uint indexed playerId);
     
-    constructor(address storageAdress) ERC721("PlayerFootball", "PB") StorageHelper(storageAdress) {
+    constructor(address storageAdress) ERC721("FootballPlayer", "FP") StorageHelper(storageAdress) {
     }
 
     /**

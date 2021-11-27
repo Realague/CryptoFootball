@@ -6,7 +6,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 import "./Storage.sol";
 import "./structure/MarketItem.sol";
 
-contract CryptoFootballStorage is Storage {
+contract FootballHeroesStorage is Storage {
     
     using SafeMath for uint256;
         
@@ -14,16 +14,16 @@ contract CryptoFootballStorage is Storage {
     
     MarketItem[] private marketItems;
     
-    IERC20 internal cryptoFootballToken;
+    IERC20 internal footballHeroesToken;
     
     IERC20 internal feeToken;
     
     // Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _operatorApprovals;
     
-    constructor(address _cryptoFootballToken, address _feeToken) {
+    constructor(address _footballHeroesToken, address _feeToken) {
         feeToken = IERC20(_feeToken);
-        cryptoFootballToken  = IERC20(_cryptoFootballToken);
+        footballHeroesToken = IERC20(_footballHeroesToken);
     }
     
     // *** Getter Methods ***
@@ -31,8 +31,8 @@ contract CryptoFootballStorage is Storage {
         return feeToken;
     }
     
-    function getCryptoFootballToken() external view onlyWhitelistedContract returns (IERC20) {
-        return cryptoFootballToken;
+    function getFootballHeroesToken() external view onlyWhitelistedContract returns (IERC20) {
+        return footballHeroesToken;
     }
     
     function getNumberMarketItems() external view onlyWhitelistedContract returns (uint) {
@@ -96,8 +96,12 @@ contract CryptoFootballStorage is Storage {
         _operatorApprovals[owner][operator] = approval;
     }
     
-    function setCryptoFootballToken(address _cryptoFootballToken) external onlyWhitelistedContract {
-        cryptoFootballToken = IERC20(_cryptoFootballToken);
+    function setFootballHeroesToken(address _cryptoFootballToken) external onlyWhitelistedContract {
+        footballHeroesToken = IERC20(_cryptoFootballToken);
+    }
+
+    function setFeeToken(address _feeToken) external onlyWhitelistedContract {
+        footballHeroesToken = IERC20(_feeToken);
     }
     
 }
