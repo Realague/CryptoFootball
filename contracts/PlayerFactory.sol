@@ -29,7 +29,7 @@ contract PlayerFactory is ERC721Storage {
     
     bool public mintOpen = false;
     
-    uint public mintFees = 40;
+    uint public mintFees = 45;
     
     uint public mintPrice = 100;
     
@@ -91,12 +91,10 @@ contract PlayerFactory is ERC721Storage {
         _safeMint(_msgSender(), player.id);
     }
     
-    function mintPlayer() external botPrevention {
+    function mintPlayer() external botPrevention checkBalanceAndAllowance(feeToken, mintFees) checkBalanceAndAllowance(footballHeroesToken, mintPrice * getFootballTokenPrice()) {
         require(mintOpen, "Mint not yet open");
         uint mintPriceCalulated = mintPrice.mul(getFootballTokenPrice());
-        require(feeToken.balanceOf(_msgSender()) >= mintFees && getFootballHeroesToken().balanceOf(_msgSender()) >= mintPriceCalulated, "Not enought token to mint.");
-        feeToken.transferFrom(_msgSender(), _getRewardPoolAddress(), mintFees);
-        getFootballHeroesToken().transferFrom(_msgSender(), _getRewardPoolAddress(), mintPriceCalulated);
+
         Player memory player;
         player.frame = _generateFrame();
         player = _generateRarityAndScore(player);
@@ -107,6 +105,9 @@ contract PlayerFactory is ERC721Storage {
         player.staminaRegenPerDay = staminaRegenPerDay[player.frame];
         player = footballHeroesStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
+
+        feeToken.transferFrom(_msgSender(), _getRewardPoolAddress(), mintFees);
+        footballHeroesToken.transferFrom(_msgSender(), _getRewardPoolAddress(), mintPriceCalulated);
     }
     
     function _generateFrame() internal view returns (uint) {

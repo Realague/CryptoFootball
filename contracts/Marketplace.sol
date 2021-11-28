@@ -7,13 +7,13 @@ import "./structure/MarketItem.sol";
 
 contract Marketplace is StorageHelper {
     
-    IERC20 private listingFeeToken = IERC20(address(0x0078867bbeef44f2326bf8ddd1941a4439382ef2a7));
-    
     IERC721 private playerContract;
     
     uint private listingFees = 30;
     
-    uint private sellFees = 0;
+    uint private sellFees = 5;
+
+    bool marketplaceOpen = false;
     
     event MarketItemCreated(
         uint indexed itemId,
@@ -31,13 +31,18 @@ contract Marketplace is StorageHelper {
         require(_msgSender() == _getMarketItem(itemId).seller, "You are not the owner");
         _;
     }
-    
-    function setPlayerContract(address _playerContract) external onlyOwner {
-        playerContract = IERC721(_playerContract);
+
+    modifier isMarketplaceOpen() {
+        require(marketplaceOpen);
+        _;
     }
     
-    function setListingFeesToken(address _listingFeeToken) external onlyOwner {
-        listingFeeToken = IERC20(_listingFeeToken);
+    function setMarketplaceOpen(bool _marketplaceOpen) external onlyOwner {
+        marketplaceOpen = _marketplaceOpen;
+    }
+
+    function setPlayerContract(address _playerContract) external onlyOwner {
+        playerContract = IERC721(_playerContract);
     }
     
     function setListingFees(uint _listingFees) external onlyOwner {
@@ -48,9 +53,8 @@ contract Marketplace is StorageHelper {
         sellFees = _sellFees;
     }
 
-    function listPlayer(uint tokenId, uint price) external onlyOwnerOf(tokenId) {
+    function listPlayer(uint tokenId, uint price) external onlyOwnerOf(tokenId) checkBalanceAndAllowance(feeToken, listingFees) isMarketplaceOpen {
         require(price > 0, "Can't sell for free");
-        require(listingFeeToken.balanceOf(_msgSender()) >= listingFees);
         
         MarketItem memory marketItem = MarketItem(
             _getNumberMarketItems(),
@@ -75,7 +79,7 @@ contract Marketplace is StorageHelper {
         );
     }
     
-    function cancelListing(uint itemId) external onlySellerOf(itemId) {
+    function cancelListing(uint itemId) external onlySellerOf(itemId) isMarketplaceOpen {
         MarketItem memory marketItem = _getMarketItem(itemId);
         
         marketItem.seller = address(0);
@@ -83,7 +87,7 @@ contract Marketplace is StorageHelper {
         playerContract.transferFrom(address(this), _msgSender(), marketItem.tokenId);
     }
     
-    function changePrice(uint itemId, uint price) external onlySellerOf(itemId) botPrevention {
+    function changePrice(uint itemId, uint price) external onlySellerOf(itemId) botPrevention isMarketplaceOpen {
         MarketItem memory marketItem = _getMarketItem(itemId);
         marketItem.price = price;
         _setMarketItem(marketItem);
@@ -134,10 +138,9 @@ contract Marketplace is StorageHelper {
         return marketItemsOfAddress;
     }
     
-    function buyPlayer(uint itemId) external botPrevention {
+    function buyPlayer(uint itemId) external botPrevention isMarketplaceOpen checkBalanceAndAllowance(footballHeroesToken, _getMarketItem(itemId).price) {
         MarketItem memory marketItem = _getMarketItem(itemId);
         require(marketItem.seller != address(0) && _msgSender() != marketItem.seller && !marketItem.sold, "You can't buy this player");
-        require(marketItem.price <= getFootballHeroesToken().balanceOf(_msgSender()), "Balance is too low");
         
         marketItem.owner = _msgSender();
         marketItem.sold = true;

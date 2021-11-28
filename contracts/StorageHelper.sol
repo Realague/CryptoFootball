@@ -30,8 +30,14 @@ contract StorageHelper is Ownable {
         _;
     }
     
-    modifier onlyOwnerOf(uint _tokenId) {
-        require(_msgSender() == _getPlayerOwner(_tokenId));
+    modifier onlyOwnerOf(uint tokenId) {
+        require(_msgSender() == _getPlayerOwner(tokenId));
+        _;
+    }
+
+    modifier checkBalanceAndAllowance(IERC20 token, uint amount) {
+        require(token.allowance(_msgSender(), address(this)) >= amount, "Insuficient allowance");
+        require(token.balanceOf(_msgSender()) >= amount, "Insuficient balance");
         _;
     }
     

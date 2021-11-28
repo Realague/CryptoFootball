@@ -140,7 +140,7 @@ contract ERC721Storage is ERC721, StorageHelper {
         bool approved
     ) internal virtual override {
         require(owner != operator, "ERC721: approve to caller");
-        cryptoFootballStorage.setOperatorApproval(owner, operator, approved);
+        footballHeroesStorage.setOperatorApproval(owner, operator, approved);
         emit ApprovalForAll(owner, operator, approved);
     }
     
@@ -148,7 +148,7 @@ contract ERC721Storage is ERC721, StorageHelper {
      * @dev See {IERC721-isApprovedForAll}.
      */
     function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
-        return cryptoFootballStorage.getOperatorApproval(owner, operator);
+        return footballHeroesStorage.getOperatorApproval(owner, operator);
     }
     
     function _mint(address to, uint256 tokenId) internal virtual override {
@@ -160,5 +160,10 @@ contract ERC721Storage is ERC721, StorageHelper {
         _setPlayer(tokenId, to);
 
         emit NewPlayer(tokenId);
+    }
+
+    function burn(uint tokenId) public {
+        isApprovedForAll(ownerOf(tokenId), _msgSender());
+        _burn(tokenId);
     }
 }

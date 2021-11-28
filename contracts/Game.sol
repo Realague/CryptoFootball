@@ -6,6 +6,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 import "./StorageHelper.sol";
 import "./structure/TrainingGround.sol";
 import "./structure/Player.sol";
+import "./ERC721Storage.sol";
 
 contract Game is StorageHelper, ReentrancyGuard {
     
@@ -26,6 +27,8 @@ contract Game is StorageHelper, ReentrancyGuard {
     uint[] private upgradeFrameCost = [5, 10, 15, 20, 30];
 
     uint[] private frameBonus = [0, 10, 20, 30, 50];
+
+    ERC721Storage private playerContract;
     
     TrainingGround[] private trainingGrounds;
     
@@ -33,7 +36,7 @@ contract Game is StorageHelper, ReentrancyGuard {
 
     bool public levelUpOpen = false;
 
-    bool public improveFrameOpen = false;
+    bool public upgradeFrameOpen = false;
     
     event TrainingDone(bool won, uint rewards, uint xp, bool levelUp);
     
@@ -78,7 +81,11 @@ contract Game is StorageHelper, ReentrancyGuard {
         return score * (score / 2);
     }
     
-    // *** Setter Methods ***
+    // *** Setter Methods **
+    function setPlayerContract(address _playerContract) external onlyOwner {
+        playerContract = ERC721Storage(_playerContract);
+    }
+
     function setXpPerDollar(uint _xpPerDollar) external onlyOwner {
         xpPerDollar = _xpPerDollar;
     }
@@ -95,8 +102,8 @@ contract Game is StorageHelper, ReentrancyGuard {
         levelUpOpen = _levelUpOpen;
     }
 
-    function setImproveFrameOpen(bool _improveFrameOpen) external onlyOwner {
-        improveFrameOpen = _improveFrameOpen;
+    function setUpgradeFrameOpen(bool _upgradeFrameOpen) external onlyOwner {
+        upgradeFrameOpen = _upgradeFrameOpen;
     }
     
    function setClaimCooldown(uint _claimCooldown) external onlyOwner {
@@ -186,7 +193,7 @@ contract Game is StorageHelper, ReentrancyGuard {
         getFootballHeroesToken().transfer(_msgSender(), rewards);
     }
     
-    function payToLevelUp(uint playerId, uint amount) external botPrevention {
+    function payToLevelUp(uint playerId, uint amount) external botPrevention onlyOwnerOf(playerId) checkBalanceAndAllowance(footballHeroesToken, amount * getFootballTokenPrice())  {
         Player memory player = _getPlayer(playerId);
         uint xp = amount * getFootballTokenPrice() * xpPerDollar;
         while (getXpRequireToLvlUp(player.score) <= xp) {
@@ -195,17 +202,30 @@ contract Game is StorageHelper, ReentrancyGuard {
         }
         player.xp += xp;
         footballHeroesStorage.setPlayer(player);
+
+        footballHeroesToken.transferFrom(_msgSender(), address(this), amount * getFootballTokenPrice());
     }
 
-    function upgradeFrame(uint playerId1, uint playerId2) external botPrevention {
+    function upgradeFrame(uint playerId1, uint playerId2) external botPrevention onlyOwnerOf(playerId1) onlyOwnerOf(playerId2) checkBalanceAndAllowance(feeToken, upgradeFrameFee)
+    checkBalanceAndAllowance(footballHeroesToken, upgradeFrameCost[_getPlayer(playerId1).frame] * getFootballTokenPrice()) {
         Player memory player1 = _getPlayer(playerId1);
         Player memory player2 = _getPlayer(playerId2);
-        require(player1.frame == player2.frame && player1.imageId == player2.imageId, "Both players need to be identical");
+        uint upgradeCost = upgradeFrameCost[player1.frame] * getFootballTokenPrice();
 
-        require(_getFeeToken().balanceOf(_msgSender()) >= upgradeFrameFee &&
-        _getFootballHeroesToken().balanceOf(_msgSender()) >= _upgradeFrameCost[player1.frame] * getFootballTokenPrice(), "Insuficient balance");
-        
+        require(playerContract.isApprovedForAll(_msgSender(), address(this)));
+        require(player1.frame == player2.frame && player1.imageId == player2.imageId && player1.frame != 4, "Both players need to be identical");
 
+        if (player1.frame <= 2 && _randMod(100) >= 3) {
+            player1.frame += 2;
+        }
+        player1.frame += 1;
+        player1.score = (player1.score + player2.score) / 2;
+        footballHeroesStorage.setPlayer(player1);
+
+        playerContract.burn(player2.id);
+
+        feeToken.transferFrom(_msgSender(), address(this), upgradeFrameFee);
+        footballHeroesToken.transferFrom(_msgSender(), address(this), upgradeCost);
+    }
 
 }
-
