@@ -9,7 +9,7 @@ contract Marketplace is StorageHelper {
     
     IERC721 private playerContract;
     
-    uint private listingFees = 30;
+    uint private listingFees = 10;
     
     uint private sellFees = 5;
 
@@ -23,6 +23,8 @@ contract Marketplace is StorageHelper {
         uint256 price,
         bool sold
     );
+
+    event MarketItemBought(address indexed buyer, uint tokenId);
     
     constructor(address storageAdress) StorageHelper(storageAdress) {
     }
@@ -91,7 +93,6 @@ contract Marketplace is StorageHelper {
         MarketItem memory marketItem = _getMarketItem(itemId);
         marketItem.price = price;
         _setMarketItem(marketItem);
-        playerContract.transferFrom(_msgSender(), address(this), marketItem.tokenId);
     }
     
     function getPlayersForSale() external view returns (MarketItem[] memory) {
@@ -107,10 +108,10 @@ contract Marketplace is StorageHelper {
         return false;
     }
     
-    function getPlayerForSaleFiltered(uint[] memory frames, uint scoreMin, uint scoreMax, uint priceMin, uint priceMax, bool sold) external view returns (MarketItem[] memory) {
+    function getPlayerForSaleFiltered(uint[] memory frames, uint scoreMin, uint scoreMax, uint priceMin, uint priceMax, bool sold) external view returns (uint[] memory) {
         require(scoreMax >= scoreMin && priceMax >= priceMin);
         uint counter = 0;
-        MarketItem[] memory marketItemsFiltered;
+        uint[] memory marketItemsFiltered;
         MarketItem[] memory marketItem = _getMarketItems();
         for (uint i = 0; i < marketItem.length; i++) {
             Player memory player = _getPlayer(marketItem[i].tokenId);
@@ -118,28 +119,29 @@ contract Marketplace is StorageHelper {
                 player.score >= scoreMin && player.score <= scoreMax
                 && marketItem[i].price >= priceMin && marketItem[i].price <= priceMax
                 && marketItem[i].sold == sold && marketItem[i].seller != address(0)) {
-                marketItemsFiltered[counter] = marketItem[i];
+                marketItemsFiltered[counter] = marketItem[i].itemId;
                 counter++;
             }
         }
         return marketItemsFiltered;
     }
     
-    function getListedPlayerOfAddress(bool sold) external view returns (MarketItem[] memory) {
+    function getListedPlayerOfAddress(bool sold) external view returns (uint[] memory) {
         uint counter = 0;
-        MarketItem[] memory marketItemsOfAddress;
+        uint[] memory marketItemsOfAddress;
         MarketItem[] memory marketItem = _getMarketItems();
         for (uint i = 0; i < marketItem.length; i++) {
             if (marketItem[i].owner == _msgSender() && sold == marketItem[i].sold) {
-                marketItemsOfAddress[counter] = marketItem[i];
+                marketItemsOfAddress[counter] = marketItem[i].itemId;
                 counter++;
             }
         }
         return marketItemsOfAddress;
     }
     
-    function buyPlayer(uint itemId) external botPrevention isMarketplaceOpen checkBalanceAndAllowance(footballHeroesToken, _getMarketItem(itemId).price) {
+    function buyPlayer(uint itemId, uint price) external botPrevention isMarketplaceOpen checkBalanceAndAllowance(footballHeroesToken, _getMarketItem(itemId).price) {
         MarketItem memory marketItem = _getMarketItem(itemId);
+        require(price == marketItem.price);
         require(marketItem.seller != address(0) && _msgSender() != marketItem.seller && !marketItem.sold, "You can't buy this player");
         
         marketItem.owner = _msgSender();
@@ -147,8 +149,11 @@ contract Marketplace is StorageHelper {
         
         _setMarketItem(marketItem);
         
-        getFootballHeroesToken().transferFrom(_msgSender(), address(this), marketItem.price);
+        footballHeroesToken.transferFrom(_msgSender(), address(this), marketItem.price);
+        footballHeroesToken.transfer(marketItem.seller, marketItem.price * 100 / (100 + sellFees));
         playerContract.transferFrom(address(this), _msgSender(), marketItem.tokenId);
+
+        emit MarketItemBought(_msgSender(), marketItem.tokenId);
     }
     
 }

@@ -5,6 +5,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 import "./Storage.sol";
 import "./structure/MarketItem.sol";
+import "./structure/Footballteam.sol";
 
 contract FootballHeroesStorage is Storage {
     
@@ -13,6 +14,8 @@ contract FootballHeroesStorage is Storage {
     Player[] private players;
     
     MarketItem[] private marketItems;
+
+    mapping(address => FootballTeam) private footballTeams;
     
     IERC20 internal footballHeroesToken;
     
@@ -27,6 +30,10 @@ contract FootballHeroesStorage is Storage {
     }
     
     // *** Getter Methods ***
+    function getFootballTeam(address _address) external view returns (FootballTeam memory) {
+        return footballTeams[_address];
+    }
+
     function getFeeToken() external view onlyWhitelistedContract returns (IERC20) {
         return feeToken;
     }
@@ -72,6 +79,10 @@ contract FootballHeroesStorage is Storage {
     }
     
     // *** Setter Methods ***
+    function setFootballTeam(FootballTeam memory footballTeam, address _address) external onlyWhitelistedContract {
+        footballTeams[_address] = footballTeam;
+    }
+
     function addMarketItems(MarketItem memory marketItem) external onlyWhitelistedContract {
         marketItems.push(marketItem);
     }
@@ -92,7 +103,7 @@ contract FootballHeroesStorage is Storage {
         return player;
     }
     
-    function setOperatorApproval(address owner, address operator, bool approval) external {
+    function setOperatorApproval(address owner, address operator, bool approval) external onlyWhitelistedContract {
         _operatorApprovals[owner][operator] = approval;
     }
     

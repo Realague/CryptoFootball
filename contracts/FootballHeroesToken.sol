@@ -8,5 +8,9 @@ contract FootballHeroes is ERC20 {
     constructor() ERC20 ("FootballHeroes", "FH") {
         _mint(_msgSender(), 1000000 * (10 ** 18));
     }
+
+    function burn(uint amount) external {
+        _burn(_msgSender(), amount);
+    }
     
 }

@@ -4,9 +4,9 @@ pragma solidity ^0.8.9;
 struct Player {
     uint id;
     uint imageId;
-    uint position;
-    uint rarity;
-    uint frame;
+    Position position;
+    Rarity rarity;
+    Frame frame;
     uint score;
     uint staminaMax;
     uint staminaRegenPerDay;
@@ -19,4 +19,4 @@ enum Frame { NONE, BRONZE, SILVER, GOLD, DIAMOND }
 
 enum Rarity { REGIONAL, NATIONAL, CHAMPION, LEGEND }
 
-enum Position { GOAL, DEFENDER, MIDFIELDER, ATTACKER }
+enum Position { GOALKEEPER, DEFENDER, MIDFIELDER, ATTACKER }
