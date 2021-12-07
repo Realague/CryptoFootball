@@ -71,8 +71,8 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     function getClaimFee() public view returns (uint) {
-        uint fee = claimFeePercentage.sub(claimFeeDecreaseRatePerDay.mul(block.timestamp.sub(_getRewardTimer(_msgSender())).div(1 days)));
-        return fee > 0 && fee <= 30 ? fee : 0;
+        int fee = int(claimFeePercentage) - int(claimFeeDecreaseRatePerDay) * (int(int(block.timestamp) - int(_getRewardTimer(_msgSender()))) / 1 days);
+        return fee > 0 && fee <= 30 ? uint(fee) : 0;
     }
    
     function getClaimCooldown() external view onlyOwner returns (uint) {
@@ -86,6 +86,11 @@ contract Game is StorageHelper, ReentrancyGuard {
     
     function getXpRequireToLvlUp(uint score) public pure returns (uint) {
         return score * (score / 2);
+    }
+
+    function getRemainingClaimCooldown() external view returns (uint) {
+        int remainingCooldown = int(_getClaimCooldown(_msgSender())) - int(block.timestamp);
+        return remainingCooldown > int(0) ? uint(remainingCooldown) : 0;
     }
     
     // *** Setter Methods **
@@ -208,9 +213,10 @@ contract Game is StorageHelper, ReentrancyGuard {
         uint xp = amount * getFootballTokenPrice() * xpPerDollar;
         uint xpGain = xp;
         uint levelGain = 0;
-        while (getXpRequireToLvlUp(player.score) <= xp) {
-            xp -= getXpRequireToLvlUp(player.score);
+        while (getXpRequireToLvlUp(player.score) - player.xp <= xp) {
+            xp -= (getXpRequireToLvlUp(player.score) - player.xp);
             player.score++;
+            player.xp = 0;
             levelGain++;
         }
         player.xp += xp;

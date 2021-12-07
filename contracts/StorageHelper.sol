@@ -60,8 +60,8 @@ contract StorageHelper is Ownable {
         return footballHeroesStorage.getAddress(keccak256(abi.encodePacked("player", _tokenId)));
     }
     
-    function _deletePlayerowner(uint _tokenId) internal {
-        return footballHeroesStorage.deleteAddress(keccak256(abi.encodePacked("player", _tokenId)));
+    function _deletePlayerOwner(uint _tokenId) internal {
+        footballHeroesStorage.deleteAddress(keccak256(abi.encodePacked("player", _tokenId)));
     }
 
     function _setTotalContribution(uint _contribution) internal {
@@ -116,8 +116,8 @@ contract StorageHelper is Ownable {
         return footballHeroesStorage.getUint(keccak256(abi.encodePacked("rewards", _address)));
     }
     
-    function _setRewards(address _address, uint _rewardTimer) internal {
-        footballHeroesStorage.setUint(keccak256(abi.encodePacked("rewardtimer", _address)), _rewardTimer);
+    function _setRewards(address _address, uint _rewards) internal {
+        footballHeroesStorage.setUint(keccak256(abi.encodePacked("rewards", _address)), _rewards);
     }
     
     function _getRewardTimer(address _address) internal view returns (uint) {

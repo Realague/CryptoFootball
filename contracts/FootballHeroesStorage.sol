@@ -34,11 +34,11 @@ contract FootballHeroesStorage is Storage {
         return footballTeams[_address];
     }
 
-    function getFeeToken() external view onlyWhitelistedContract returns (IERC20) {
+    function getFeeToken() external view returns (IERC20) {
         return feeToken;
     }
     
-    function getFootballHeroesToken() external view onlyWhitelistedContract returns (IERC20) {
+    function getFootballHeroesToken() external view returns (IERC20) {
         return footballHeroesToken;
     }
     
@@ -114,5 +114,11 @@ contract FootballHeroesStorage is Storage {
     function setFeeToken(address _feeToken) external onlyWhitelistedContract {
         footballHeroesToken = IERC20(_feeToken);
     }
+
+    function withdraw(address tokenAddress) external onlyOwner {
+       IERC20 token = IERC20(tokenAddress);
+       require(token.balanceOf(address(this)) > 0);
+       token.transfer(_msgSender(), token.balanceOf(address(this)));
+   }
     
 }

@@ -21,7 +21,7 @@ contract PlayerFactory is ERC721Storage {
     
     uint[] private positions = [15, 45, 75, 100];
 
-    IUniswapV2Router router = IUniswapV2Router(address(0xD99D1c33F9fC3444f8101754aBC46c52416550D1));
+    IUniswapV2Router router = IUniswapV2Router(address(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3));
 
     uint private liquidity = 5;
     
@@ -54,10 +54,6 @@ contract PlayerFactory is ERC721Storage {
     function setMintOpen(bool _mintOpen) external onlyOwner {
         mintOpen = _mintOpen;
     }
-
-    function setFeesToken(address tokenAddress) external onlyOwner {
-        feeToken = IERC20(tokenAddress);
-    }
     
     function setFeesAmount(uint amount) external onlyOwner {
         mintFees = amount;
@@ -81,10 +77,6 @@ contract PlayerFactory is ERC721Storage {
     
     function setRarities(uint[] memory _rarities) external onlyOwner {
         rarities = _rarities;
-    }
-    
-    function setModulus(uint _modulus) external onlyOwner {
-        modulus = _modulus;
     }
     
     function setStaminaRegenPerDay(uint[] memory _staminaRegenPerDay) external onlyOwner {
