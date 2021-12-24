@@ -9,19 +9,17 @@ contract Marketplace is StorageHelper {
     
     IERC721 private playerContract;
     
-    uint private listingFees = 10;
-    
     uint private sellFees = 5;
 
-    bool marketplaceOpen = false;
+    uint public listingFees = 10;
+
+    bool public marketplaceOpen = false;
     
     event MarketItemCreated(
         uint indexed itemId,
         uint indexed tokenId,
         address indexed seller,
-        address owner,
-        uint256 price,
-        bool sold
+        uint256 price
     );
 
     event MarketItemBought(address indexed buyer, uint tokenId);
@@ -35,7 +33,7 @@ contract Marketplace is StorageHelper {
     }
 
     modifier isMarketplaceOpen() {
-        require(marketplaceOpen);
+        require(marketplaceOpen, "Marketplace not yet opened");
         _;
     }
     
@@ -69,15 +67,14 @@ contract Marketplace is StorageHelper {
         
         _addMarketItem(marketItem);
         
-        playerContract.transferFrom(_msgSender(), address(this), tokenId);
+        playerContract.transferFrom(_msgSender(), address(footballHeroesStorage), tokenId);
+        feeToken.transferFrom(_msgSender(), address(this), listingFees);
         
         emit MarketItemCreated(
             marketItem.itemId,
             tokenId,
             _msgSender(),
-            address(0),
-            price,
-            false
+            price
         );
     }
     
@@ -86,7 +83,7 @@ contract Marketplace is StorageHelper {
         
         marketItem.seller = address(0);
         _setMarketItem(marketItem);
-        playerContract.transferFrom(address(this), _msgSender(), marketItem.tokenId);
+        playerContract.transferFrom(address(footballHeroesStorage), _msgSender(), marketItem.tokenId);
     }
     
     function changePrice(uint itemId, uint price) external onlySellerOf(itemId) botPrevention isMarketplaceOpen {
@@ -110,8 +107,9 @@ contract Marketplace is StorageHelper {
     
     function getPlayerForSaleFiltered(uint[] memory frames, uint scoreMin, uint scoreMax, uint priceMin, uint priceMax, bool sold) external view returns (uint[] memory) {
         require(scoreMax >= scoreMin && priceMax >= priceMin);
-        uint counter = 0;
-        uint[] memory marketItemsFiltered;
+        uint counter;
+        uint nbResults;
+        
         MarketItem[] memory marketItem = _getMarketItems();
         for (uint i = 0; i < marketItem.length; i++) {
             Player memory player = _getPlayer(marketItem[i].tokenId);
@@ -119,7 +117,17 @@ contract Marketplace is StorageHelper {
                 player.score >= scoreMin && player.score <= scoreMax
                 && marketItem[i].price >= priceMin && marketItem[i].price <= priceMax
                 && marketItem[i].sold == sold && marketItem[i].seller != address(0)) {
-                marketItemsFiltered[counter] = marketItem[i].itemId;
+                nbResults++;
+            }
+        }
+        uint[] memory marketItemsFiltered = new uint[](nbResults);
+        for (uint i = 0; i < marketItem.length; i++) {
+            Player memory player = _getPlayer(marketItem[i].tokenId);
+            if (contains(frames, uint(player.frame)) &&
+                player.score >= scoreMin && player.score <= scoreMax
+                && marketItem[i].price >= priceMin && marketItem[i].price <= priceMax
+                && marketItem[i].sold == sold && marketItem[i].seller != address(0)) {
+                marketItemsFiltered[counter] = i;
                 counter++;
             }
         }
@@ -127,16 +135,27 @@ contract Marketplace is StorageHelper {
     }
     
     function getListedPlayerOfAddress(bool sold) external view returns (uint[] memory) {
-        uint counter = 0;
-        uint[] memory marketItemsOfAddress;
+        uint counter;
+        uint nbResults;
+
         MarketItem[] memory marketItem = _getMarketItems();
-        for (uint i = 0; i < marketItem.length; i++) {
-            if (marketItem[i].owner == _msgSender() && sold == marketItem[i].sold) {
-                marketItemsOfAddress[counter] = marketItem[i].itemId;
+        for (uint i = 0; i != marketItem.length; i++) {
+            if (marketItem[i].seller == _msgSender() && sold == marketItem[i].sold) {
+                nbResults++;
+            }
+        }
+        uint[] memory marketItemsOfAddress = new uint[](nbResults);
+        for (uint i = 0; i != marketItem.length; i++) {
+            if (marketItem[i].seller == _msgSender() && sold == marketItem[i].sold) {
+                marketItemsOfAddress[counter] = i;
                 counter++;
             }
         }
         return marketItemsOfAddress;
+    }
+
+    function getMarketItem(uint itemId) external view returns (MarketItem memory) {
+        return _getMarketItem(itemId);
     }
     
     function buyPlayer(uint itemId, uint price) external botPrevention isMarketplaceOpen checkBalanceAndAllowance(footballHeroesToken, _getMarketItem(itemId).price) {
@@ -144,14 +163,14 @@ contract Marketplace is StorageHelper {
         require(price == marketItem.price);
         require(marketItem.seller != address(0) && _msgSender() != marketItem.seller && !marketItem.sold, "You can't buy this player");
         
-        marketItem.owner = _msgSender();
+        marketItem.buyer = _msgSender();
         marketItem.sold = true;
         
         _setMarketItem(marketItem);
         
         footballHeroesToken.transferFrom(_msgSender(), address(this), marketItem.price);
         footballHeroesToken.transfer(marketItem.seller, marketItem.price * 100 / (100 + sellFees));
-        playerContract.transferFrom(address(this), _msgSender(), marketItem.tokenId);
+        playerContract.transferFrom(address(footballHeroesStorage), _msgSender(), marketItem.tokenId);
 
         emit MarketItemBought(_msgSender(), marketItem.tokenId);
     }

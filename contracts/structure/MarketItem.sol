@@ -5,7 +5,7 @@ struct MarketItem {
     uint itemId;
     uint256 tokenId;
     address seller;
-    address owner;
+    address buyer;
     uint256 price;
     bool sold;
 }

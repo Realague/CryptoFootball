@@ -62,13 +62,14 @@ contract FootballHeroesStorage is Storage {
         return players[tokenId];
     }
     
-   function getPlayersByAdress(address owner) external view returns (Player[] memory) {
-        Player[] memory result;
+   function getPlayers() external view returns (uint[] memory) {
         uint counter = 0;
-        for (uint i = 0; i < players.length; i++) {
-            if (addressStorage[keccak256(abi.encodePacked("player", i))] == owner) {
-                result[counter] = players[i];
-                counter.add(1);
+        uint nbPlayerOwned = uintStorage[keccak256(abi.encodePacked("nbplayers", _msgSender()))];
+        uint[] memory result = new uint[](nbPlayerOwned);
+        for (uint i = 0; i != players.length && counter != nbPlayerOwned; i++) {
+            if (addressStorage[keccak256(abi.encodePacked("player", i))] == _msgSender()) {
+                result[counter] = i;
+                counter++;
             }
         }
         return result;

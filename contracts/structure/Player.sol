@@ -8,11 +8,15 @@ struct Player {
     Rarity rarity;
     Frame frame;
     uint score;
-    uint staminaMax;
-    uint staminaRegenPerDay;
     uint currentStamina;
     uint lastTraining;
     uint xp;
+}
+
+struct OpponentPlayer {
+    uint imageId;
+    Position position;
+    uint score;
 }
 
 enum Frame { NONE, BRONZE, SILVER, GOLD, DIAMOND }

@@ -141,27 +141,27 @@ contract StorageHelper is Ownable {
     } 
     
     function _addGlobalRewards(uint _rewards) internal {
-        footballHeroesStorage.setUint(keccak256(abi.encodePacked("globalrewards")), footballHeroesStorage.getUint(keccak256(abi.encodePacked("globalrewards"))).add(_rewards));
+        footballHeroesStorage.setUint(keccak256("globalrewards"), footballHeroesStorage.getUint(keccak256(abi.encodePacked("globalrewards"))).add(_rewards));
     }
     
     function _removeGlobalRewards(uint _rewards) internal {
-        footballHeroesStorage.setUint(keccak256(abi.encodePacked("globalrewards")), footballHeroesStorage.getUint(keccak256(abi.encodePacked("globalrewards"))).sub(_rewards));
+        footballHeroesStorage.setUint(keccak256("globalrewards"), footballHeroesStorage.getUint(keccak256(abi.encodePacked("globalrewards"))).sub(_rewards));
     }
     
     function _getPairAddress() internal view returns (address) {
-        return footballHeroesStorage.getAddress(keccak256(abi.encodePacked("pairaddress")));
+        return footballHeroesStorage.getAddress(keccak256("pairaddress"));
     }
     
     function setPairAddress(address _pairAddress) external onlyOwner {
-        footballHeroesStorage.setAddress(keccak256(abi.encodePacked("pairaddress")), _pairAddress);
+        footballHeroesStorage.setAddress(keccak256("pairaddress"), _pairAddress);
     }
     
     function _getRewardPoolAddress() internal view returns (address) {
-        return footballHeroesStorage.getAddress(keccak256(abi.encodePacked("rewardpool")));
+        return footballHeroesStorage.getAddress(keccak256("rewardpool"));
     }
     
-    function _setRewardPoolAddress(address _rewardPoolAddress) internal {
-        footballHeroesStorage.setAddress(keccak256(abi.encodePacked("rewardpool")), _rewardPoolAddress);
+    function setRewardPoolAddress(address _rewardPoolAddress) public onlyOwner {
+        footballHeroesStorage.setAddress(keccak256("rewardpool"), _rewardPoolAddress);
     }
     
     function _addMarketItem(MarketItem memory marketItem) internal {
@@ -193,8 +193,7 @@ contract StorageHelper is Ownable {
         return _getTokenPrice(_getPairAddress());
     }
     
-    function _getTokenPrice(address _pairAddress) private view returns (uint)
-    {
+    function _getTokenPrice(address _pairAddress) private view returns (uint) {
         IUniswapV2Pair pair = IUniswapV2Pair(_pairAddress);
         (uint nbToken1, uint nbToken2,) = pair.getReserves();
         return nbToken2.div(nbToken1);

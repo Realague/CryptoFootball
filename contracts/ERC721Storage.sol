@@ -23,8 +23,6 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
 
     // Token symbol
     string private _symbol;
-
-    event Mint(uint indexed playerId);
     
     constructor(address storageAdress) StorageHelper(storageAdress) {
         _name = "FootballPlayer";
@@ -357,8 +355,6 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
         _beforeTokenTransfer(address(0), to, tokenId);
 
         _setPlayer(tokenId, to);
-
-        emit Mint(tokenId);
     }
 
     function burn(uint tokenId) public {
@@ -385,4 +381,5 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
         address to,
         uint256 tokenId
     ) internal virtual {}
+
 }

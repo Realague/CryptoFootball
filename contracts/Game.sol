@@ -24,10 +24,14 @@ contract Game is StorageHelper, ReentrancyGuard {
     uint private xpPerDollar = 50;
 
     uint private upgradeFrameFee = 10;
+
+    uint private staminaMax = 100;
     
     uint[] private upgradeFrameCost = [5, 10, 15, 20, 30];
 
     uint[] private frameBonus = [0, 10, 20, 30, 50];
+
+    uint[] private staminaRegenPerDay = [60, 80, 100, 120, 140];
 
     ERC721Storage private playerContract;
     
@@ -79,12 +83,19 @@ contract Game is StorageHelper, ReentrancyGuard {
         return claimCooldown;
     }
     
-    function getCurrentStamina(Player memory player) public view returns (uint) {
-        uint stamina = player.currentStamina + (player.lastTraining - block.timestamp) / (player.staminaRegenPerDay / 24 hours);
-        return stamina > player.staminaMax ? player.staminaMax : stamina;
+    function getCurrentStamina(uint playerId) public view returns (uint) {
+        return _getCurrentStamina(_getPlayer(playerId));
+    }
+
+    function _getCurrentStamina(Player memory player) internal view returns (uint) {
+        if (player.lastTraining == 0) {
+            return player.currentStamina;
+        }
+        uint stamina = player.currentStamina + (player.lastTraining - block.timestamp) / (staminaRegenPerDay[uint(player.frame)] / 24 hours);
+        return stamina > staminaMax ? staminaMax : stamina;
     }
     
-    function getXpRequireToLvlUp(uint score) public pure returns (uint) {
+    function getXpRequireToLvlUp(uint score) internal pure returns (uint) {
         return score * (score / 2);
     }
 
@@ -94,6 +105,14 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     // *** Setter Methods **
+    function setStaminaMax(uint _staminaMax) external onlyOwner {
+        staminaMax = _staminaMax;
+    }
+
+    function setStaminaRegenPerDay(uint[] memory _staminaRegenPerDay) external onlyOwner {
+        staminaRegenPerDay = _staminaRegenPerDay;
+    }
+
     function setPlayerContract(address _playerContract) external onlyOwner {
         playerContract = ERC721Storage(_playerContract);
     }
@@ -139,11 +158,11 @@ contract Game is StorageHelper, ReentrancyGuard {
         }
     }
 
-    function trainingGround(uint trainingGroundId, uint playerId) external botPrevention {
+    function trainingGround(uint trainingGroundId, uint playerId) external botPrevention onlyOwnerOf(playerId) {
         require(trainingOpen);
         Player memory player = _getPlayer(playerId);
-        require(getCurrentStamina(player) >= 20, "not enought stamina");
-        player.currentStamina = getCurrentStamina(player) - 20;
+        require(_getCurrentStamina(player) >= 20, "not enought stamina");
+        player.currentStamina = getCurrentStamina(player.id) - 20;
         //Create cooldowns for this address if it doesn't exist
         _initCooldowns();
         //Retreiving data for training
@@ -153,7 +172,7 @@ contract Game is StorageHelper, ReentrancyGuard {
         //Do the training
         if (_train(trainingGroundId, player.score)) {
             xpGain += tg.xpGain + tg.xpGain * frameBonus[uint(player.frame)] / 100;
-            uint rewards = (tg.rewards + tg.rewards * frameBonus[uint(player.frame)] / 100) / getFootballTokenPrice();
+            uint rewards = (tg.rewards + tg.rewards * frameBonus[uint(player.frame)] / 100) * getFootballTokenPrice();
             require(_checkPoolToken(rewards));
             _addGlobalRewards(rewards);
             _setRewards(_msgSender(), _getRewards(_msgSender()) + rewards);
@@ -192,7 +211,7 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     function _checkPoolToken(uint rewards) internal view returns (bool) {
-        return footballHeroesToken.balanceOf(address(this)) - _getGlobalRewards() >= rewards;
+        return footballHeroesToken.balanceOf(_getRewardPoolAddress()) - _getGlobalRewards() >= rewards;
     }
     
     function claimReward() external nonReentrant botPrevention {
