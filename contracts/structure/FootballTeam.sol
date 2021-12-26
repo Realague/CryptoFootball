@@ -19,7 +19,6 @@ struct AiFootballTeam {
     OpponentPlayer[] midfielders;
     OpponentPlayer[] defenders;
     uint rewards;
-    uint difficulty;
     uint averageScore;
 }
 

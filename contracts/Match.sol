@@ -21,7 +21,9 @@ contract Match is Game {
     event MatchResult(
         address indexed _address,
         uint rewards,
-        bool won
+        bool won,
+        uint opponentGoal,
+        uint teamGoal
     );
 
     modifier validTeam() {
@@ -44,7 +46,7 @@ contract Match is Game {
 
     function addOpponentTeam(AiFootballTeam memory opponentTeam) external onlyOwner {
         opponentTeam.averageScore = _calculateAverageScore(opponentTeam.attackers, opponentTeam.midfielders, opponentTeam.defenders, opponentTeam.goalKeeper);
-         //opponentTeams.push(opponentTeam);
+        opponentTeams.push(opponentTeam);
     }
 
     function setOpponentTeams(AiFootballTeam[] memory _opponentTeams) external onlyOwner {
@@ -59,7 +61,6 @@ contract Match is Game {
     function setTeam(FootballTeam memory footballTeam) external {
         _checkComposition(footballTeam);
         if (footballHeroesStorage.getFootballTeam(_msgSender()).lastMatchPlayed == 0) {
-
         }
         footballHeroesStorage.setFootballTeam(footballTeam, _msgSender());
         if (addressToOpponents[_msgSender()].length == 0) {
@@ -108,11 +109,23 @@ contract Match is Game {
         return opponents;
     }
 
+    function getCurrentMatchAvailable() internal view returns (uint) {
+        FootballTeam memory footballTeam = footballHeroesStorage.getFootballTeam(_msgSender());
+        if (footballTeam.lastMatchPlayed == 0) {
+            return player.currentStamina;
+        }
+        uint stamina = player.currentStamina + (player.lastTraining - block.timestamp) / (staminaRegenPerDay[uint(player.frame)] / 24 hours);
+        return stamina > staminaMax ? staminaMax : stamina;
+    }
+
     function playMatch(uint opponentTeamId) external validTeam {
         AiFootballTeam memory opponentTeam = opponentTeams[opponentTeamId];
         FootballTeam memory playerTeam = footballHeroesStorage.getFootballTeam(_msgSender());
-        //uint footballTeamAverageScore = _calculateAverageScore(playerTeam.attackers, playerTeam.midfielders, playerTeam.defenders, playerTeam.goalKeeper);
-        bool win = _randMod(100) >= 1;
+        uint footballTeamAverageScore = _calculateAverageScore(playerTeam.attackers, playerTeam.midfielders, playerTeam.defenders, playerTeam.goalKeeper);
+        int scoreDifference = footballTeamAverageScore - opponentTeam.averageScore;
+        bool win;
+        win = _randMod(100) < 50 + scoreDifference * (1 / (scoreDifference / 100 + 1));
+        
         uint rewards;
         if (win) {
             rewards = opponentTeam.rewards * getFootballTokenPrice();
@@ -121,7 +134,7 @@ contract Match is Game {
             _setRewards(_msgSender(), _getRewards(_msgSender()) + rewards);
         }
 
-        
+        emit MatchResult(_msgSender(), rewards, win);
     }
 
     function _calculateAverageScore(uint[] memory attackers, uint[] memory midfielders, uint[] memory defenders, uint goalKeeper) internal view returns (uint) {
@@ -135,21 +148,6 @@ contract Match is Game {
         }
         for (uint i = 0; i != defenders.length; i++) {
             totalScore += _getPlayer(defenders[i]).score;
-        }
-        return totalScore / (defenders.length + attackers.length + midfielders.length + 1);
-    }
-
-    function _calculateAverageScore(OpponentPlayer[] memory attackers, OpponentPlayer[] memory midfielders, OpponentPlayer[] memory defenders, OpponentPlayer memory goalKeeper) internal pure returns (uint) {
-        uint totalScore = 0;
-        totalScore += goalKeeper.score;
-        for (uint i = 0; i != attackers.length; i++) {
-            totalScore += attackers[i].score;
-        }
-        for (uint i = 0; i != midfielders.length; i++) {
-            totalScore += midfielders[i].score;
-        }
-        for (uint i = 0; i != defenders.length; i++) {
-            totalScore += defenders[i].score;
         }
         return totalScore / (defenders.length + attackers.length + midfielders.length + 1);
     }

@@ -30,15 +30,15 @@ contract FootballHeroesStorage is Storage {
     }
     
     // *** Getter Methods ***
-    function getFootballTeam(address _address) external view returns (FootballTeam memory) {
+    function getFootballTeam(address _address) external view onlyWhitelistedContract returns (FootballTeam memory) {
         return footballTeams[_address];
     }
 
-    function getFeeToken() external view returns (IERC20) {
+    function getFeeToken() external view onlyWhitelistedContract returns (IERC20) {
         return feeToken;
     }
     
-    function getFootballHeroesToken() external view returns (IERC20) {
+    function getFootballHeroesToken() external view onlyWhitelistedContract returns (IERC20) {
         return footballHeroesToken;
     }
     
@@ -54,15 +54,15 @@ contract FootballHeroesStorage is Storage {
         return marketItems[id];
     }
     
-    function getNumberPlayers() external view returns (uint) {
+    function getNumberPlayers() external view onlyWhitelistedContract returns (uint) {
         return players.length;
     }
     
-    function getPlayer(uint tokenId) external view returns (Player memory) {
+    function getPlayer(uint tokenId) external view onlyWhitelistedContract returns (Player memory) {
         return players[tokenId];
     }
     
-   function getPlayers() external view returns (uint[] memory) {
+   function getPlayers() external view onlyWhitelistedContract returns (uint[] memory) {
         uint counter = 0;
         uint nbPlayerOwned = uintStorage[keccak256(abi.encodePacked("nbplayers", _msgSender()))];
         uint[] memory result = new uint[](nbPlayerOwned);
@@ -75,7 +75,7 @@ contract FootballHeroesStorage is Storage {
         return result;
     }
     
-    function getOperatorApproval(address owner, address operator) external view returns (bool) {
+    function getOperatorApproval(address owner, address operator) external view onlyWhitelistedContract returns (bool) {
         return _operatorApprovals[owner][operator];
     }
     
