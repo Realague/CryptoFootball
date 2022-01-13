@@ -58,11 +58,11 @@ contract FootballHeroesStorage is Storage {
         return players.length;
     }
     
-    function getPlayer(uint tokenId) external view onlyWhitelistedContract returns (Player memory) {
+    function getPlayer(uint tokenId) external view returns (Player memory) {
         return players[tokenId];
     }
     
-   function getPlayers() external view onlyWhitelistedContract returns (uint[] memory) {
+   function getPlayers() external view returns (uint[] memory) {
         uint counter = 0;
         uint nbPlayerOwned = uintStorage[keccak256(abi.encodePacked("nbplayers", _msgSender()))];
         uint[] memory result = new uint[](nbPlayerOwned);
@@ -120,6 +120,10 @@ contract FootballHeroesStorage is Storage {
        IERC20 token = IERC20(tokenAddress);
        require(token.balanceOf(address(this)) > 0);
        token.transfer(_msgSender(), token.balanceOf(address(this)));
+   }
+
+   function claimRewards(address to, uint rewards) external onlyWhitelistedContract {
+       footballHeroesToken.transfer(to, rewards);
    }
     
 }

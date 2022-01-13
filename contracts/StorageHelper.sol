@@ -103,14 +103,6 @@ contract StorageHelper is Ownable {
     function _getPlayerApproval(uint _tokenId) internal view returns (address) {
         return footballHeroesStorage.getAddress(keccak256(abi.encodePacked("playerapproval", _tokenId)));
     }
-        
-    function _setOperatorApproval(uint _tokenId, address _address) internal {
-        footballHeroesStorage.setAddress(keccak256(abi.encodePacked("operatorapproval", _tokenId)), _address);
-    }
-    
-    function _getOperatorApproval(uint _tokenId) internal view returns (address) {
-        return footballHeroesStorage.getAddress(keccak256(abi.encodePacked("operatorapproval", _tokenId)));
-    }
     
     function _getRewards(address _address) internal view returns (uint) {
         return footballHeroesStorage.getUint(keccak256(abi.encodePacked("rewards", _address)));
@@ -160,7 +152,7 @@ contract StorageHelper is Ownable {
         return footballHeroesStorage.getAddress(keccak256("rewardpool"));
     }
     
-    function setRewardPoolAddress(address _rewardPoolAddress) public onlyOwner {
+    function setRewardPoolAddress(address _rewardPoolAddress) external onlyOwner {
         footballHeroesStorage.setAddress(keccak256("rewardpool"), _rewardPoolAddress);
     }
     

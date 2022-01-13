@@ -14,10 +14,10 @@ struct FootballTeam {
 }
 
 struct AiFootballTeam {
-    OpponentPlayer goalKeeper;
-    OpponentPlayer[] attackers;
-    OpponentPlayer[] midfielders;
-    OpponentPlayer[] defenders;
+    uint goalKeeper;
+    uint[] attackers;
+    uint[] midfielders;
+    uint[] defenders;
     uint rewards;
     uint averageScore;
 }

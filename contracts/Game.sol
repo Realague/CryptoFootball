@@ -91,7 +91,7 @@ contract Game is StorageHelper, ReentrancyGuard {
         if (player.lastTraining == 0) {
             return player.currentStamina;
         }
-        uint stamina = player.currentStamina + (player.lastTraining - block.timestamp) / (staminaRegenPerDay[uint(player.frame)] / 24 hours);
+        uint stamina = player.currentStamina + (block.timestamp - player.lastTraining) / 1 hours * (staminaRegenPerDay[uint(player.frame)] / 24);
         return stamina > staminaMax ? staminaMax : stamina;
     }
     
@@ -159,18 +159,19 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
 
     function trainingGround(uint trainingGroundId, uint playerId) external botPrevention onlyOwnerOf(playerId) {
-        require(trainingOpen);
+        require(trainingOpen, "Training is closed");
         Player memory player = _getPlayer(playerId);
         require(_getCurrentStamina(player) >= 20, "not enought stamina");
         player.currentStamina = getCurrentStamina(player.id) - 20;
+        player.lastTraining = block.timestamp;
         //Create cooldowns for this address if it doesn't exist
         _initCooldowns();
         //Retreiving data for training
         TrainingGround memory tg = trainingGrounds[trainingGroundId];
         uint xpGain;
-        bool won;
+        bool won = _train(trainingGroundId, player.score);
         //Do the training
-        if (_train(trainingGroundId, player.score)) {
+        if (won) {
             xpGain += tg.xpGain + tg.xpGain * frameBonus[uint(player.frame)] / 100;
             uint rewards = (tg.rewards + tg.rewards * frameBonus[uint(player.frame)] / 100) * getFootballTokenPrice();
             require(_checkPoolToken(rewards));
@@ -215,14 +216,14 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     function claimReward() external nonReentrant botPrevention {
-        require(_getClaimCooldown(_msgSender()) >= block.timestamp);
+        require(_getClaimCooldown(_msgSender()) <= block.timestamp && trainingOpen);
         uint initialRewards = _getRewards(_msgSender());
         uint rewards = initialRewards.sub(getClaimFee().mul(initialRewards).div(100));
-        _removeGlobalRewards(initialRewards);
+        _removeGlobalRewards(rewards);
         _setRewards(_msgSender(), 0);
         _setClaimCooldown(_msgSender(), block.timestamp.add(claimCooldown));
         _setRewardTimer(_msgSender());
-        footballHeroesToken.transfer(_msgSender(), rewards);
+        footballHeroesStorage.claimRewards(_msgSender(), rewards);
 
         emit ClaimReward(_msgSender(), rewards);
     }
@@ -267,8 +268,7 @@ contract Game is StorageHelper, ReentrancyGuard {
         playerContract.burn(player2.id);
 
         feeToken.transferFrom(_msgSender(), address(this), upgradeFrameFee);
-        footballHeroesToken.transferFrom(_msgSender(), address(this), upgradeCost);
-        FootballHeroes(address(footballHeroesToken)).burn(upgradeCost);
+        footballHeroesToken.burnFrom(_msgSender(), upgradeCost);
 
         emit UpgradeFrame(_msgSender(), player1.id);
     }

@@ -16,7 +16,7 @@ struct Player {
 struct OpponentPlayer {
     uint imageId;
     Position position;
-    Rarity rarity;
+    Rarity score;
 }
 
 enum Frame { NONE, BRONZE, SILVER, GOLD, DIAMOND }
