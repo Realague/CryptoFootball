@@ -148,14 +148,6 @@ contract StorageHelper is Ownable {
         footballHeroesStorage.setAddress(keccak256("pairaddress"), _pairAddress);
     }
     
-    function _getRewardPoolAddress() internal view returns (address) {
-        return footballHeroesStorage.getAddress(keccak256("rewardpool"));
-    }
-    
-    function setRewardPoolAddress(address _rewardPoolAddress) external onlyOwner {
-        footballHeroesStorage.setAddress(keccak256("rewardpool"), _rewardPoolAddress);
-    }
-    
     function _addMarketItem(MarketItem memory marketItem) internal {
         footballHeroesStorage.addMarketItems(marketItem);
     }
@@ -178,7 +170,7 @@ contract StorageHelper is Ownable {
 
     function _randMod(uint _modulus) internal view returns (uint) {
         randNonce.add(1);
-        return uint(keccak256(abi.encodePacked(block.timestamp, _msgSender(), randNonce))) % _modulus;
+        return uint(keccak256(abi.encodePacked(_msgSender(), randNonce))) % _modulus;
     }
     
     function getFootballTokenPrice() public view returns (uint) {
@@ -190,6 +182,10 @@ contract StorageHelper is Ownable {
         (uint nbToken1, uint nbToken2,) = pair.getReserves();
         return nbToken2.div(nbToken1);
    }
+
+    function _getXpRequireToLvlUp(uint score) internal pure returns (uint) {
+        return score * (score / 2);
+    }
    
    function withdraw(address tokenAddress) external onlyOwner {
        IERC20 token = IERC20(tokenAddress);

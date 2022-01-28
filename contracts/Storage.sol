@@ -11,13 +11,13 @@ contract Storage is Ownable {
     
     mapping(address => bool) public whiteList;
     
-    mapping (bytes32 => string) internal stringStorage;
+    mapping(bytes32 => string) internal stringStorage;
     
-    mapping (bytes32 => address) internal addressStorage;
+    mapping(bytes32 => address) internal addressStorage;
     
-    mapping (bytes32 => uint) internal uintStorage;
+    mapping(bytes32 => uint) internal uintStorage;
     
-    mapping (bytes32 => bool) internal boolStorage;
+    mapping(bytes32 => bool) internal boolStorage;
     
     function upgradeVersion(address oldVersion, address newVersion) external onlyOwner {
         delete whiteList[oldVersion];

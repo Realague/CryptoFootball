@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 import "./ERC721Storage.sol";
-import "./interface/IUniswapV2Router.sol";
 
 contract PlayerFactory is ERC721Storage {
     
@@ -19,28 +18,35 @@ contract PlayerFactory is ERC721Storage {
     
     uint[] private positions = [15, 45, 75, 100];
 
-    IUniswapV2Router router = IUniswapV2Router(address(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3));
+    uint private xpPerDollar = 50;
 
-    uint private liquidity = 5 * 10 ** 18;
+    uint private upgradeFrameFee = 10 ** 18;
     
     uint private modulus = 100;
     
     uint private staminaMax = 100;
     
     uint private scoreThreshold = 20;
+
+    uint[] private upgradeFrameCost = [5 ** 18, 10 ** 18, 15 ** 18, 20 ** 18, 30 ** 18];
     
     bool public mintOpen = true;
-    
+
+    bool public levelUpOpen = true;
+
+    bool public upgradeFrameOpen = true;
+
     uint public mintFees = 45 * 10 ** 18;
     
     uint public mintPrice = 100 * 10 ** 18;
 
+    event UpgradeFrame(address indexed user, uint indexed playerId);
+
+    event LevelUp(address indexed user, uint indexed playerId, uint xpGain, uint levelGain);
+
     event NewPlayer(address indexed owner, uint indexed playerId);
     
     constructor(address storageAddress) ERC721Storage(storageAddress) {
-        feeToken.approve(address(router), MAX_INT);
-        footballHeroesToken.approve(address(router), MAX_INT);
-        
         mintablePlayers[0][0] = [true, true];
         mintablePlayers[0][1] = [true, true, true];
         mintablePlayers[0][2] = [true, true];
@@ -63,8 +69,12 @@ contract PlayerFactory is ERC721Storage {
     }
     
     //Setter
-    function setLiquidity(uint _liquidity) external onlyOwner {
-        liquidity = _liquidity;
+    function setLevelUpOpen(bool _levelUpOpen) external onlyOwner {
+        levelUpOpen = _levelUpOpen;
+    }
+
+    function setUpgradeFrameOpen(bool _upgradeFrameOpen) external onlyOwner {
+        upgradeFrameOpen = _upgradeFrameOpen;
     }
 
     function setMintOpen(bool _mintOpen) external onlyOwner {
@@ -90,9 +100,13 @@ contract PlayerFactory is ERC721Storage {
     function setScores(uint[] memory _scores) external onlyOwner {
         scores = _scores;
     }
-    
-    function setRarities(uint[] memory _rarities) external onlyOwner {
-        rarities = _rarities;
+
+    function setXpPerDollar(uint _xpPerDollar) external onlyOwner {
+        xpPerDollar = _xpPerDollar;
+    }
+
+    function setUpgradeFrameFee(uint _upgradeFrameFee) external onlyOwner {
+        upgradeFrameFee = _upgradeFrameFee * 10**18;
     }
     
     function setMintablePlayer(uint rarity, uint position, uint imageId, bool mintable) external onlyOwner {
@@ -113,7 +127,6 @@ contract PlayerFactory is ERC721Storage {
     function mintPlayer() external botPrevention checkBalanceAndAllowance(feeToken, mintFees) checkBalanceAndAllowance(footballHeroesToken, mintPrice * getFootballTokenPrice()) {
         require(mintOpen, "Mint not yet open");
         uint mintPriceCalculated = mintPrice * getFootballTokenPrice();
-        uint liquidityCalculated = liquidity * getFootballTokenPrice();
 
         Player memory player;
         player.frame = _generateFrame();
@@ -121,14 +134,12 @@ contract PlayerFactory is ERC721Storage {
         player.position = _generatePosition();
         player.imageId = _generateImageId(player.rarity, player.position);
         player.currentStamina = staminaMax;
+        //player.isAvailable = true;
         player = footballHeroesStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
 
-
         feeToken.transferFrom(_msgSender(), address(this), mintFees);
-        footballHeroesToken.transferFrom(_msgSender(), _getRewardPoolAddress(), mintPriceCalculated - liquidityCalculated);
-        footballHeroesToken.transferFrom(_msgSender(), address(this), liquidityCalculated);
-        //router.addLiquidity(address(feeToken), address(footballHeroesToken), liquidity, liquidityCalculated, liquidity, liquidityCalculated, _getPairAddress(), block.timestamp + 2 minutes);
+        footballHeroesToken.transferFrom(_msgSender(), address(footballHeroesStorage), mintPriceCalculated);
         emit NewPlayer(_msgSender(), player.id);
     }
     
@@ -173,6 +184,54 @@ contract PlayerFactory is ERC721Storage {
             }
         }
         return Position(2);
+    }
+
+        function payToLevelUp(uint playerId, uint amount) external botPrevention onlyOwnerOf(playerId) checkBalanceAndAllowance(footballHeroesToken, amount * getFootballTokenPrice())  {
+        Player memory player = _getPlayer(playerId);
+        //require(player.isAvailable, "Can't level up a player that is in a team");
+        uint xp = amount * getFootballTokenPrice() * xpPerDollar;
+        uint xpGain = xp;
+        uint levelGain = 0;
+        while (_getXpRequireToLvlUp(player.score) - player.xp <= xp) {
+            xp -= (_getXpRequireToLvlUp(player.score) - player.xp);
+            player.score++;
+            player.xp = 0;
+            levelGain++;
+        }
+        player.xp += xp;
+        footballHeroesStorage.setPlayer(player);
+
+        footballHeroesToken.transferFrom(_msgSender(), address(this), amount * getFootballTokenPrice());
+
+        emit LevelUp(_msgSender(), playerId, xpGain, levelGain);
+    }
+
+    function upgradeFrame(uint playerId1, uint playerId2) external botPrevention onlyOwnerOf(playerId1) onlyOwnerOf(playerId2) checkBalanceAndAllowance(feeToken, upgradeFrameFee)
+    checkBalanceAndAllowance(footballHeroesToken, upgradeFrameCost[uint(_getPlayer(playerId1).frame)] * getFootballTokenPrice()) {
+        require(upgradeFrameOpen, "Upgrade frame not yet open");
+        Player memory player1 = _getPlayer(playerId1);
+        Player memory player2 = _getPlayer(playerId2);
+        //require(player2.isAvailable, "Can't burn a player that is in a team");
+        uint upgradeCost = upgradeFrameCost[uint(player1.frame)] * getFootballTokenPrice();
+
+        require(isApprovedForAll(_msgSender(), address(this)), "Insuficient allowance");
+        require(player1.frame == player2.frame && player1.imageId == player2.imageId && player1.frame != Frame.DIAMOND, "Both players need to be identical");
+
+        uint frame = uint(player1.frame);
+        if (player1.frame <= Frame.SILVER && _randMod(100) >= 3) {
+            frame += 1;
+        }
+        frame += 1;
+        player1.frame = Frame(frame);
+        player1.score = (player1.score + player2.score) / 2;
+        footballHeroesStorage.setPlayer(player1);
+
+        burn(player2.id);
+
+        feeToken.transferFrom(_msgSender(), address(this), upgradeFrameFee);
+        footballHeroesToken.transferFrom(_msgSender(), address(footballHeroesStorage), upgradeCost);
+
+        emit UpgradeFrame(_msgSender(), player1.id);
     }
 
     function authorizeMarketplace(address marketplaceAddress) external onlyOwner {

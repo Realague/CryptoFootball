@@ -56,16 +56,7 @@ contract Marketplace is StorageHelper {
     function listPlayer(uint tokenId, uint price) external onlyOwnerOf(tokenId) checkBalanceAndAllowance(feeToken, listingFees) isMarketplaceOpen {
         require(price > 0, "Can't sell for free");
         Player memory player = _getPlayer(tokenId);
-        FootballTeam memory team = footballHeroesStorage.getFootballTeam(_msgSender());
-        if (player.position == Position.GOALKEEPER) {
-            require(tokenId == team.goalKeeper), "Can't sell player that is in a team");
-        } else if (player.position == Position.DEFENDER) {
-            require(contains(team.defenders, tokenId), "Can't sell player that is in a team");
-        } else if (player.position == Position.MIDFIELDER) {
-            require(contains(team.midfielders, tokenId), "Can't sell player that is in a team");
-        } else if (player.position == Position.ATTACKERS) {
-            require(contains(team.attackers, tokenId), "Can't sell player that is in a team");
-        }
+        //require(player.isAvailable, "Can't sell a player that is in a team");
         
         MarketItem memory marketItem = MarketItem(
             _getNumberMarketItems(),

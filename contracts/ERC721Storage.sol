@@ -115,7 +115,7 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
         address to,
         uint256 tokenId
     ) public virtual override {
-        //solhint-disable-next-line max-line-length
+
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
 
         _transfer(from, to, tokenId);
@@ -158,7 +158,7 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
      */
     function _burn(uint256 tokenId) internal virtual {
         address owner = ownerOf(tokenId);
-
+        require(_getPlayer(tokenId).isAvailable, "Can't burn a player that is in a team");
         _beforeTokenTransfer(owner, address(0), tokenId);
 
         // Clear approvals
@@ -219,6 +219,7 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
     ) internal virtual {
         require(ownerOf(tokenId) == from, "ERC721: transfer of token that is not own");
         require(to != address(0), "ERC721: transfer to the zero address");
+        require(_getPlayer(tokenId).isAvailable, "Can't transfer a player that is in a team");
 
         _beforeTokenTransfer(from, to, tokenId);
 
@@ -357,7 +358,8 @@ contract ERC721Storage is Context, ERC165, IERC721, IERC721Metadata, StorageHelp
     }
 
     function burn(uint tokenId) public {
-        isApprovedForAll(ownerOf(tokenId), _msgSender());
+        require(_getPlayer(tokenId).isAvailable, "Can't burn a player that is in a team");
+        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _burn(tokenId);
     }
 

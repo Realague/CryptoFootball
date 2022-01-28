@@ -16,6 +16,8 @@ contract FootballHeroesStorage is Storage {
     MarketItem[] private marketItems;
 
     mapping(address => FootballTeam) private footballTeams;
+
+    mapping(address => uint[]) private addressToOpponents;
     
     IERC20 internal footballHeroesToken;
     
@@ -30,6 +32,10 @@ contract FootballHeroesStorage is Storage {
     }
     
     // *** Getter Methods ***
+    function getOpponentTeams(address wallet) external view onlyWhitelistedContract returns (uint[] memory) {
+        return addressToOpponents[wallet];
+    }
+
     function getFootballTeam(address _address) external view onlyWhitelistedContract returns (FootballTeam memory) {
         return footballTeams[_address];
     }
@@ -80,6 +86,10 @@ contract FootballHeroesStorage is Storage {
     }
     
     // *** Setter Methods ***
+    function setOpponentTeams(uint[] memory opponents, address wallet) external onlyWhitelistedContract {
+        addressToOpponents[wallet] = opponents;
+    }
+
     function setFootballTeam(FootballTeam memory footballTeam, address _address) external onlyWhitelistedContract {
         footballTeams[_address] = footballTeam;
     }

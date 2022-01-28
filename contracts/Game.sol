@@ -7,7 +7,7 @@ import "./StorageHelper.sol";
 import "./structure/TrainingGround.sol";
 import "./structure/Player.sol";
 import "./ERC721Storage.sol";
-import "./FootballheroesToken.sol";
+import "./GBToken.sol";
 
 contract Game is StorageHelper, ReentrancyGuard {
     
@@ -20,34 +20,20 @@ contract Game is StorageHelper, ReentrancyGuard {
     uint private claimFeeDecreaseRatePerDay = 2;
     
     uint private staminaCost = 20;
-    
-    uint private xpPerDollar = 50;
 
     uint private upgradeFrameFee = 10;
 
     uint private staminaMax = 100;
-    
-    uint[] private upgradeFrameCost = [5, 10, 15, 20, 30];
 
     uint[] private frameBonus = [0, 10, 20, 30, 50];
 
     uint[] private staminaRegenPerDay = [60, 80, 100, 120, 140];
-
-    ERC721Storage private playerContract;
     
     TrainingGround[] private trainingGrounds;
     
-    bool public trainingOpen = false;
-
-    bool public levelUpOpen = false;
-
-    bool public upgradeFrameOpen = false;
+    bool public trainingOpen = true;
     
     event TrainingDone(address indexed user, bool won, uint rewards, uint xp, bool levelUp);
-
-    event UpgradeFrame(address indexed user, uint indexed playerId);
-
-    event LevelUp(address indexed user, uint indexed playerId, uint xpGain, uint levelGain);
 
     event ClaimReward(address indexed user, uint amount);
     
@@ -113,28 +99,10 @@ contract Game is StorageHelper, ReentrancyGuard {
         staminaRegenPerDay = _staminaRegenPerDay;
     }
 
-    function setPlayerContract(address _playerContract) external onlyOwner {
-        playerContract = ERC721Storage(_playerContract);
-    }
 
-    function setXpPerDollar(uint _xpPerDollar) external onlyOwner {
-        xpPerDollar = _xpPerDollar;
-    }
-
-    function setUpgradeFrameFee(uint _upgradeFrameFee) external onlyOwner {
-        upgradeFrameFee = _upgradeFrameFee;
-    }
     
     function setTrainingOpen(bool _trainingOpen) external onlyOwner {
         trainingOpen = _trainingOpen;
-    }
-
-    function setLevelUpOpen(bool _levelUpOpen) external onlyOwner {
-        levelUpOpen = _levelUpOpen;
-    }
-
-    function setUpgradeFrameOpen(bool _upgradeFrameOpen) external onlyOwner {
-        upgradeFrameOpen = _upgradeFrameOpen;
     }
     
    function setClaimCooldown(uint _claimCooldown) external onlyOwner {
@@ -212,7 +180,7 @@ contract Game is StorageHelper, ReentrancyGuard {
     }
     
     function _checkPoolToken(uint rewards) internal view returns (bool) {
-        return footballHeroesToken.balanceOf(_getRewardPoolAddress()) - _getGlobalRewards() >= rewards;
+        return int(footballHeroesToken.balanceOf(address(footballHeroesStorage)) - _getGlobalRewards()) >= int(rewards);
     }
     
     function claimReward() external nonReentrant botPrevention {
@@ -226,51 +194,6 @@ contract Game is StorageHelper, ReentrancyGuard {
         footballHeroesStorage.claimRewards(_msgSender(), rewards);
 
         emit ClaimReward(_msgSender(), rewards);
-    }
-    
-    function payToLevelUp(uint playerId, uint amount) external botPrevention onlyOwnerOf(playerId) checkBalanceAndAllowance(footballHeroesToken, amount * getFootballTokenPrice())  {
-        Player memory player = _getPlayer(playerId);
-        uint xp = amount * getFootballTokenPrice() * xpPerDollar;
-        uint xpGain = xp;
-        uint levelGain = 0;
-        while (getXpRequireToLvlUp(player.score) - player.xp <= xp) {
-            xp -= (getXpRequireToLvlUp(player.score) - player.xp);
-            player.score++;
-            player.xp = 0;
-            levelGain++;
-        }
-        player.xp += xp;
-        footballHeroesStorage.setPlayer(player);
-
-        footballHeroesToken.transferFrom(_msgSender(), address(this), amount * getFootballTokenPrice());
-
-        emit LevelUp(_msgSender(), playerId, xpGain, levelGain);
-    }
-
-    function upgradeFrame(uint playerId1, uint playerId2) external botPrevention onlyOwnerOf(playerId1) onlyOwnerOf(playerId2) checkBalanceAndAllowance(feeToken, upgradeFrameFee)
-    checkBalanceAndAllowance(footballHeroesToken, upgradeFrameCost[uint(_getPlayer(playerId1).frame)] * getFootballTokenPrice()) {
-        Player memory player1 = _getPlayer(playerId1);
-        Player memory player2 = _getPlayer(playerId2);
-        uint upgradeCost = upgradeFrameCost[uint(player1.frame)] * getFootballTokenPrice();
-
-        require(playerContract.isApprovedForAll(_msgSender(), address(this)));
-        require(player1.frame == player2.frame && player1.imageId == player2.imageId && player1.frame != Frame.DIAMOND, "Both players need to be identical");
-
-        uint frame = uint(player1.frame);
-        if (player1.frame <= Frame.SILVER && _randMod(100) >= 3) {
-            frame += 1;
-        }
-        frame += 1;
-        player1.frame = Frame(frame);
-        player1.score = (player1.score + player2.score) / 2;
-        footballHeroesStorage.setPlayer(player1);
-
-        playerContract.burn(player2.id);
-
-        feeToken.transferFrom(_msgSender(), address(this), upgradeFrameFee);
-        footballHeroesToken.burnFrom(_msgSender(), upgradeCost);
-
-        emit UpgradeFrame(_msgSender(), player1.id);
     }
 
 }
