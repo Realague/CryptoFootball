@@ -40,11 +40,11 @@ contract FootballHeroesStorage is Storage {
         return footballTeams[_address];
     }
 
-    function getFeeToken() external view onlyWhitelistedContract returns (IERC20) {
+    function getFeeToken() external view returns (IERC20) {
         return feeToken;
     }
     
-    function getFootballHeroesToken() external view onlyWhitelistedContract returns (IERC20) {
+    function getFootballHeroesToken() external view returns (IERC20) {
         return footballHeroesToken;
     }
     

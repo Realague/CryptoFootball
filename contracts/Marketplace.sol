@@ -11,7 +11,7 @@ contract Marketplace is StorageHelper {
     
     uint private sellFees = 5;
 
-    uint public listingFees = 10;
+    uint public listingFees = 10 * 10**18;
 
     bool public marketplaceOpen = false;
     
@@ -24,7 +24,7 @@ contract Marketplace is StorageHelper {
 
     event MarketItemBought(address indexed buyer, uint tokenId);
     
-    constructor(address storageAdress) StorageHelper(storageAdress) {
+    constructor(address storageAddress) StorageHelper(storageAddress) {
     }
     
     modifier onlySellerOf(uint itemId) {
@@ -46,7 +46,7 @@ contract Marketplace is StorageHelper {
     }
     
     function setListingFees(uint _listingFees) external onlyOwner {
-        listingFees = _listingFees;
+        listingFees = _listingFees * 10**18;
     }
     
     function setSellFees(uint _sellFees) external onlyOwner {
@@ -56,7 +56,7 @@ contract Marketplace is StorageHelper {
     function listPlayer(uint tokenId, uint price) external onlyOwnerOf(tokenId) checkBalanceAndAllowance(feeToken, listingFees) isMarketplaceOpen {
         require(price > 0, "Can't sell for free");
         Player memory player = _getPlayer(tokenId);
-        //require(player.isAvailable, "Can't sell a player that is in a team");
+        require(player.isAvailable, "Can't sell a player that is in a team");
         
         MarketItem memory marketItem = MarketItem(
             _getNumberMarketItems(),

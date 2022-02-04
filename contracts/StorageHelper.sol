@@ -11,7 +11,7 @@ contract StorageHelper is Ownable {
         
     using SafeMath for uint256;
     
-    uint private randNonce = 0;
+    uint private randNonce = 1;
 
     uint internal MAX_INT = 2**256 - 1;
     
@@ -168,9 +168,9 @@ contract StorageHelper is Ownable {
         return footballHeroesStorage.getNumberMarketItems();
     }
 
-    function _randMod(uint _modulus) internal view returns (uint) {
-        randNonce.add(1);
-        return uint(keccak256(abi.encodePacked(_msgSender(), randNonce))) % _modulus;
+    function _randMod(uint _modulus) internal returns (uint) {
+        randNonce = (16807 * randNonce) % (2**31 - 1);
+        return randNonce % _modulus;
     }
     
     function getFootballTokenPrice() public view returns (uint) {
@@ -180,11 +180,17 @@ contract StorageHelper is Ownable {
     function _getTokenPrice(address _pairAddress) private view returns (uint) {
         IUniswapV2Pair pair = IUniswapV2Pair(_pairAddress);
         (uint nbToken1, uint nbToken2,) = pair.getReserves();
-        return nbToken2.div(nbToken1);
+        return nbToken2.div(nbToken1) < 1 ? 1 : nbToken2.div(nbToken1);
+   }
+
+   function getExactPrice() external view returns (uint) {
+        IUniswapV2Pair pair = IUniswapV2Pair(_getPairAddress());
+        (uint nbToken1, uint nbToken2,) = pair.getReserves();
+        return (nbToken2 * 10**18) / nbToken1;
    }
 
     function _getXpRequireToLvlUp(uint score) internal pure returns (uint) {
-        return score * (score / 2);
+        return score * (score / 3);
     }
    
    function withdraw(address tokenAddress) external onlyOwner {

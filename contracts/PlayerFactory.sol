@@ -3,6 +3,13 @@ pragma solidity ^0.8.9;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol";
 import "./ERC721Storage.sol";
+import "./structure/Pack.sol";
+
+interface IMatch {
+
+    function getComposition(uint id) external view returns (Composition memory);
+
+}
 
 contract PlayerFactory is ERC721Storage {
     
@@ -20,7 +27,7 @@ contract PlayerFactory is ERC721Storage {
 
     uint private xpPerDollar = 50;
 
-    uint private upgradeFrameFee = 10 ** 18;
+    uint private upgradeFrameFee = 10 * 10 ** 18;
     
     uint private modulus = 100;
     
@@ -28,7 +35,9 @@ contract PlayerFactory is ERC721Storage {
     
     uint private scoreThreshold = 20;
 
-    uint[] private upgradeFrameCost = [5 ** 18, 10 ** 18, 15 ** 18, 20 ** 18, 30 ** 18];
+    address private packAddress;
+
+    uint[] private upgradeFrameCost = [5 * 10**18, 10 * 10**18, 15 * 10**18, 20 * 10**18, 30 * 10**18];
     
     bool public mintOpen = true;
 
@@ -36,15 +45,17 @@ contract PlayerFactory is ERC721Storage {
 
     bool public upgradeFrameOpen = true;
 
-    uint public mintFees = 45 * 10 ** 18;
+    uint public mintFees = 22.5 * 10 ** 18;
     
-    uint public mintPrice = 100 * 10 ** 18;
+    uint public mintPrice = 75 * 10 ** 18;
 
     event UpgradeFrame(address indexed user, uint indexed playerId);
 
     event LevelUp(address indexed user, uint indexed playerId, uint xpGain, uint levelGain);
 
     event NewPlayer(address indexed owner, uint indexed playerId);
+
+    event NewPlayers(address indexed owner, uint[] playersId);
     
     constructor(address storageAddress) ERC721Storage(storageAddress) {
         mintablePlayers[0][0] = [true, true];
@@ -69,6 +80,10 @@ contract PlayerFactory is ERC721Storage {
     }
     
     //Setter
+    function setPackAddress(address _packAddress) external onlyOwner {
+        packAddress = _packAddress;
+    }
+
     function setLevelUpOpen(bool _levelUpOpen) external onlyOwner {
         levelUpOpen = _levelUpOpen;
     }
@@ -117,11 +132,46 @@ contract PlayerFactory is ERC721Storage {
         mintablePlayers[rarity][position] = mintables;
     }
 
-    function mintPlayer(uint imageId, Position position, Frame frame, Rarity rarity, uint score) external onlyOwner {
-        Player memory player = Player(0, imageId, position, rarity, frame, score, staminaMax, 0, 0);
+    function mintPlayer(uint imageId, Position position, Frame frame, Rarity rarity, uint score) public onlyOwner {
+        Player memory player = Player(0, imageId, position, rarity, frame, score, staminaMax, 0, 0, true);
         player = footballHeroesStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
-        emit NewPlayer(_msgSender(), player.id);
+    }
+
+    function mintTeam(uint compositionId, address gameContract) external botPrevention checkBalanceAndAllowance(feeToken, mintFees * 11) checkBalanceAndAllowance(footballHeroesToken, mintPrice * getFootballTokenPrice() * 11) {
+        require(mintOpen, "Mint not yet open");
+        uint mintPriceCalculated = mintPrice * getFootballTokenPrice() * 11;
+        Composition memory composition = IMatch(gameContract).getComposition(compositionId);
+        uint[] memory playersId = new uint[](11);
+        uint incr;
+
+        playersId[incr++] = _createPlayer(Position.GOALKEEPER);
+        for (uint i = 0; composition.attackerNb != i; i++) {
+            playersId[incr++] = _createPlayer(Position.ATTACKER);
+        }
+        for (uint i = 0; composition.midfielderNb != i; i++) {
+            playersId[incr++] = _createPlayer(Position.MIDFIELDER);
+        }
+        for (uint i = 0; composition.defenderNb != i; i++) {
+            playersId[incr++] = _createPlayer(Position.DEFENDER);
+        }
+
+        feeToken.transferFrom(_msgSender(), address(this), mintFees * 11);
+        footballHeroesToken.transferFrom(_msgSender(), address(footballHeroesStorage), mintPriceCalculated);
+        emit NewPlayers(_msgSender(), playersId);
+    }
+    
+    function _createPlayer(Position position) internal returns (uint) {
+        Player memory player;
+        player.frame = _generateFrame();
+        (player.rarity, player.score) = _generateRarityAndScore();
+        player.position = position;
+        player.imageId = _generateImageId(player.rarity, player.position);
+        player.currentStamina = staminaMax;
+        player.isAvailable = true;
+        player = footballHeroesStorage.createPlayer(player);
+        _safeMint(_msgSender(), player.id);
+        return player.id;
     }
     
     function mintPlayer() external botPrevention checkBalanceAndAllowance(feeToken, mintFees) checkBalanceAndAllowance(footballHeroesToken, mintPrice * getFootballTokenPrice()) {
@@ -134,7 +184,7 @@ contract PlayerFactory is ERC721Storage {
         player.position = _generatePosition();
         player.imageId = _generateImageId(player.rarity, player.position);
         player.currentStamina = staminaMax;
-        //player.isAvailable = true;
+        player.isAvailable = true;
         player = footballHeroesStorage.createPlayer(player);
         _safeMint(_msgSender(), player.id);
 
@@ -143,7 +193,7 @@ contract PlayerFactory is ERC721Storage {
         emit NewPlayer(_msgSender(), player.id);
     }
     
-    function _generateFrame() internal view returns (Frame) {
+    function _generateFrame() internal returns (Frame) {
         uint frame = _randMod(modulus);
         
         for (uint i = 0; i != frames.length; i++) {
@@ -154,7 +204,7 @@ contract PlayerFactory is ERC721Storage {
         return Frame(0);
     }
     
-    function _generateRarityAndScore() internal view returns (Rarity rarity, uint score) {
+    function _generateRarityAndScore() internal returns (Rarity rarity, uint score) {
         uint rand = _randMod(modulus);
         
         for (uint i = 0; i != rarities.length; i++) {
@@ -169,13 +219,13 @@ contract PlayerFactory is ERC721Storage {
         }
     }
     
-    function _generateImageId(Rarity rarity, Position position) internal view returns (uint imageId) {
+    function _generateImageId(Rarity rarity, Position position) internal returns (uint imageId) {
         do {
            imageId = _randMod(mintablePlayers[uint(position)][uint(rarity)].length);
         } while (!mintablePlayers[uint(position)][uint(rarity)][imageId]);
     }
     
-    function _generatePosition() internal view returns (Position) {
+    function _generatePosition() internal returns (Position) {
         uint position = _randMod(modulus);
         
         for (uint i = 0; i != positions.length; i++) {
@@ -186,9 +236,9 @@ contract PlayerFactory is ERC721Storage {
         return Position(2);
     }
 
-        function payToLevelUp(uint playerId, uint amount) external botPrevention onlyOwnerOf(playerId) checkBalanceAndAllowance(footballHeroesToken, amount * getFootballTokenPrice())  {
+    function payToLevelUp(uint playerId, uint amount) external botPrevention onlyOwnerOf(playerId) checkBalanceAndAllowance(footballHeroesToken, amount * getFootballTokenPrice())  {
         Player memory player = _getPlayer(playerId);
-        //require(player.isAvailable, "Can't level up a player that is in a team");
+        require(player.isAvailable, "Can't level up a player that is in a team");
         uint xp = amount * getFootballTokenPrice() * xpPerDollar;
         uint xpGain = xp;
         uint levelGain = 0;
@@ -211,14 +261,14 @@ contract PlayerFactory is ERC721Storage {
         require(upgradeFrameOpen, "Upgrade frame not yet open");
         Player memory player1 = _getPlayer(playerId1);
         Player memory player2 = _getPlayer(playerId2);
-        //require(player2.isAvailable, "Can't burn a player that is in a team");
+        require(player2.isAvailable, "Can't burn a player that is in a team");
         uint upgradeCost = upgradeFrameCost[uint(player1.frame)] * getFootballTokenPrice();
 
         require(isApprovedForAll(_msgSender(), address(this)), "Insuficient allowance");
         require(player1.frame == player2.frame && player1.imageId == player2.imageId && player1.frame != Frame.DIAMOND, "Both players need to be identical");
 
         uint frame = uint(player1.frame);
-        if (player1.frame <= Frame.SILVER && _randMod(100) >= 3) {
+        if (player1.frame <= Frame.SILVER && _randMod(100) <= 3) {
             frame += 1;
         }
         frame += 1;
@@ -237,5 +287,11 @@ contract PlayerFactory is ERC721Storage {
     function authorizeMarketplace(address marketplaceAddress) external onlyOwner {
         footballHeroesStorage.setOperatorApproval(address(footballHeroesStorage), marketplaceAddress, true);
     }
+
+ /*   function openPack(Pack memory pack) external {
+        require(_msgSender() == packAddress, "NHA");
+    }*/
+
+    //function mintPlayer(uint imageId, Position position, Frame frame, Rarity rarity, uint score) public onlyOwner {
 
 }

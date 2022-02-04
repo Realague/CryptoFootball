@@ -11,9 +11,7 @@ contract Match is Game {
 
     AiFootballTeam[] private opponentTeams;
 
-    uint[] private nbMatchByFrame = [1, 2, 3, 4, 5];
-
-    mapping(address => uint[]) private addressToOpponents;
+    uint[] private nbMatchByFrame = [2, 3, 4, 5, 6];
 
     uint private opponentsNb = 3;
 
@@ -22,6 +20,10 @@ contract Match is Game {
     bool public isMatchOpen = true;
 
     constructor(address storageAddress) Game(storageAddress) {
+        compositions.push(Composition(2,4,4));
+        compositions.push(Composition(2,3,5));
+        compositions.push(Composition(3,3,4));
+        compositions.push(Composition(1,5,4));
     }
 
     event MatchResult(
@@ -64,22 +66,26 @@ contract Match is Game {
 
     function setPlayerTeam(FootballTeam memory footballTeam) external {
         _checkComposition(footballTeam);
-        //_setTeamPlayersStatus(footballHeroesStorage.getFootballTeam(_msgSender()), true);
+        _setTeamPlayersStatus(footballHeroesStorage.getFootballTeam(_msgSender()), true);
         footballTeam.lastMatchPlayed = footballHeroesStorage.getFootballTeam(_msgSender()).lastMatchPlayed;
         if (footballTeam.lastMatchPlayed == 0) {
             footballTeam.currentMatchAvailable = nbMatchByFrame[uint(_calculateAverageFrame(footballTeam))];
         }
         footballHeroesStorage.setFootballTeam(footballTeam, _msgSender());
-        //_setTeamPlayersStatus(footballTeam, false);
-        /*if (footballHeroesStorage.getOpponentTeams(_msgSender()).length == 0) {
+        _setTeamPlayersStatus(footballTeam, false);
+        if (footballHeroesStorage.getOpponentTeams(_msgSender()).length == 0) {
             footballHeroesStorage.setOpponentTeams(_refreshOpponents(), _msgSender());
-        }*/
-        if (addressToOpponents[_msgSender()].length == 0) {
-            addressToOpponents[_msgSender()] = _refreshOpponents();
+            footballHeroesStorage.setFootballTeam(footballTeam, _msgSender());
         }
     }
 
-    /*function _setTeamPlayersStatus(FootballTeam memory footballTeam, bool status) internal {
+    function resetTeam() external {
+        _setTeamPlayersStatus(footballHeroesStorage.getFootballTeam(_msgSender()), true);
+        FootballTeam memory footballteam;
+        footballHeroesStorage.setFootballTeam(footballteam, _msgSender());
+    }
+
+    function _setTeamPlayersStatus(FootballTeam memory footballTeam, bool status) internal {
         Player memory player = _getPlayer(footballTeam.goalKeeper);
         player.isAvailable = status;
         footballHeroesStorage.setPlayer(player);
@@ -98,7 +104,7 @@ contract Match is Game {
             player.isAvailable = status;
             footballHeroesStorage.setPlayer(player);
         }
-    }*/
+    }
 
     function getPlayerTeam() external view returns (FootballTeam memory) {
         return footballHeroesStorage.getFootballTeam(_msgSender());
@@ -121,12 +127,12 @@ contract Match is Game {
     }
 
     function getOpponentTeams() external view returns (uint[] memory) {
-        return addressToOpponents[_msgSender()];
+        return footballHeroesStorage.getOpponentTeams(_msgSender());
     }
 
     function refreshOpponents() external validTeam checkBalanceAndAllowance(footballHeroesToken, getFootballTokenPrice() * refreshOpponentsFee) {
         require(isMatchOpen, "Match are not opened yet");
-        addressToOpponents[_msgSender()] = _refreshOpponents();
+        footballHeroesStorage.setOpponentTeams(_refreshOpponents(), _msgSender());
         footballHeroesToken.transferFrom(_msgSender(), address(this), getFootballTokenPrice() * refreshOpponentsFee);
     }
 
@@ -136,14 +142,16 @@ contract Match is Game {
 
     function playMatch(uint opponentTeamId) external validTeam {
         require(isMatchOpen, "Match are not opened yet");
-        require(contains(addressToOpponents[_msgSender()], opponentTeamId), "Cannot play match against this opponent");
+        require(contains(footballHeroesStorage.getOpponentTeams(_msgSender()), opponentTeamId), "Cannot play match against this opponent");
         AiFootballTeam storage opponentTeam = opponentTeams[opponentTeamId];
         FootballTeam memory playerTeam = footballHeroesStorage.getFootballTeam(_msgSender());
-        uint availableMatch = 1;//_getCurrentMatchAvailable(playerTeam);
+        uint availableMatch = _getCurrentMatchAvailable(playerTeam);
         require(availableMatch >= 1, "You already played all your matches today");
-        //uint footballTeamAverageScore = _calculateAverageScore(playerTeam);
-        int scoreDifference = 1;//int(footballTeamAverageScore - opponentTeam.averageScore);
-        bool win = true;//int(_randMod(100)) < (50 + scoreDifference * (1 / (scoreDifference / 100 + 1)));
+        //Create cooldowns for this address if it doesn't exist
+        _initCooldowns();
+        uint footballTeamAverageScore = _calculateAverageScore(playerTeam);
+        int scoreDifference = int(footballTeamAverageScore) - int(opponentTeam.averageScore);
+        bool win = int(_randMod(100)) < (50 + scoreDifference * (1 / (scoreDifference / 100 + 1)));
         
         uint rewards;
         if (win) {
@@ -207,7 +215,7 @@ contract Match is Game {
         return false;
     }
 
-    function _refreshOpponents() internal view returns (uint[] memory) {
+    function _refreshOpponents() internal returns (uint[] memory) {
         uint[] memory opponents = new uint[](opponentsNb);
         for (uint i = 0; i != opponentsNb; i++) {
             opponents[i] = _randMod(opponentTeams.length);
@@ -242,7 +250,7 @@ contract Match is Game {
     function _setMappings(OpponentPlayer memory goalKeeper, OpponentPlayer[] memory defenders, OpponentPlayer[] memory midfielders, OpponentPlayer[] memory attackers, uint rewards, uint averageScore) internal {
         AiFootballTeam memory footballTeam;
         footballTeam.averageScore = averageScore;
-        footballTeam.rewards = reward;
+        footballTeam.rewards = rewards;
         footballTeam.goalKeeper = opponentPlayers.length;
         opponentPlayers.push(goalKeeper);
         footballTeam.defenders = new uint[](defenders.length);

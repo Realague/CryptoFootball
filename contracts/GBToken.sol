@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 
-contract FootballHeroes is ERC20Burnable, Ownable {
+contract GBToken is ERC20Burnable, Ownable {
 
     mapping(address => bool) private blacklistedAddress;
 
@@ -21,7 +21,8 @@ contract FootballHeroes is ERC20Burnable, Ownable {
         address to,
         uint256 amount
     ) internal virtual override {
-        require(!blacklistedAddress[from] && from != to && amount >= 0);
+        require(!blacklistedAddress[from]);
+        super._beforeTokenTransfer(from, to, amount);
     }
     
 }
